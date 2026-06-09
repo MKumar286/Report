@@ -169,9 +169,9 @@ gap: 8px;
 display: flex;
 flex-wrap: wrap;
 align-items: center;
-gap: 8px;
+gap: 6px;
 background: rgba(0, 8, 20, 0.6);
-padding: 10px 15px;
+padding: 10px 12px;
 border-left: 1px solid rgba(255,255,255,0.15);
 border-right: 1px solid rgba(255,255,255,0.15);
 border-bottom: 1px solid rgba(255,255,255,0.1);
@@ -179,20 +179,20 @@ justify-content: space-between;
 }
 
 .stat-card {
-flex: 1 1 auto;
+flex: 1 1 0px; /* Forces cards to divide evenly based on layout boundaries to completely prevent scrolling */
 background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03));
 border: 1px solid rgba(255,255,255,0.15);
-padding: 4px 8px;
-border-radius: 8px;
+padding: 4px 4px;
+border-radius: 6px;
 text-align: center;
-min-width: unset;
+min-width: 65px; /* Extremely balanced boundaries for maximum no-scrolling alignment */
 box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
 .stat-card .card-label {
-font-size: 9px;
+font-size: 8.5px;
 text-transform: uppercase;
-letter-spacing: 0.3px;
+letter-spacing: 0.2px;
 color: #ffe082;
 font-weight: bold;
 margin-bottom: 1px;
@@ -200,7 +200,7 @@ white-space: nowrap;
 }
 
 .stat-card .card-value {
-font-size: 15px;
+font-size: 14px;
 font-weight: bold;
 color: #ffffff;
 }
@@ -439,7 +439,7 @@ justify-content: flex-start;
 }
 
 .stats-banner {
-overflow-x: auto;
+overflow-x: auto; /* Fallback fluid axis strictly for tracking mobile device screen limits layout constraints */
 flex-wrap: nowrap;
 justify-content: flex-start;
 }
@@ -544,6 +544,16 @@ padding: 6px 12px;
   </div>
 
   <div class="stat-card">
+    <div class="card-label">CSB</div>
+    <div class="card-value" id="statCsbOffers">0</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="card-label">MME</div>
+    <div class="card-value" id="statMmeOffers">0</div>
+  </div>
+
+  <div class="stat-card">
     <div class="card-label">M.Tech</div>
     <div class="card-value" id="statMtechOffers">0</div>
   </div>
@@ -598,8 +608,8 @@ let statusOfDriveKey="";
 let totalKey="";
 let companyNameKey="";
 
-// Storage object mapping target columns safely
-let deptKeys = { civ: "", eee: "", mech: "", ece: "", cse: "", it: "", csm: "", csd: "", mct: "", mtech: "" };
+// Storage mapping target department keys securely including CSB and MME columns
+let deptKeys = { civ: "", eee: "", mech: "", ece: "", cse: "", it: "", csm: "", csd: "", mct: "", csb: "", mme: "", mtech: "" };
 
 /* INITIALIZE PARSING SEQUENCE */
 Papa.parse(csvURL,{
@@ -611,7 +621,6 @@ allData = results.data.filter(
 row => Object.values(row).join("").trim() !== ""
 );
 
-// Fallback protection: If data is 0 or malformed, don't crash the table build
 if(allData.length===0){
 buildTable([]);
 return;
@@ -619,7 +628,7 @@ return;
 
 let headers = Object.keys(allData[0]);
 
-// MAXIMUM TOLERANCE LOOKUP: Fallback to blank if headers can't be found
+// Loose contains parsing check loops
 let findKey = (arr, fallback) => headers.find(h => arr.some(term => h.toLowerCase().replace(/[\s\.\-_]/g, "").includes(term))) || fallback;
 
 natureKey = findKey(["natureofthecompany", "naturecompany", "nature"], "");
@@ -628,10 +637,11 @@ statusOfDriveKey = findKey(["statusofthedrive", "statusdrive", "statusofdrive"],
 totalKey = headers.find(h => h.toLowerCase().trim() === "total") || "";
 companyNameKey = findKey(["companyname", "companyplaced", "company"], "");
 
-// Strict cleaning function for branch calculations
+// Strictly matches formatting mutations across sheet labels
 let getDeptKey = (token) => headers.find(h => h.toLowerCase().replace(/[\s\.\-_]/g, "") === token.toLowerCase().replace(/[\s\.\-_]/g, "")) || "";
 Object.keys(deptKeys).forEach(k => {
-  deptKeys[k] = getDeptKey(k === "mtech" ? "m.tech" : k);
+  let lookup = (k === "mtech") ? "m.tech" : k;
+  deptKeys[k] = getDeptKey(lookup) || headers.find(h => h.toLowerCase().trim() === lookup);
 });
 
 campusDateKey = findKey(["campusdate", "campus"], "");
@@ -657,7 +667,7 @@ thead.innerHTML="";
 tbody.innerHTML="";
 
 if(data.length===0){
-tbody.innerHTML="<tr><td colspan='20'>No Records Found Match Criteria</td></tr>";
+tbody.innerHTML="<tr><td colspan='25'>No Records Found Match Criteria</td></tr>";
 return;
 }
 
@@ -707,16 +717,12 @@ tbody.appendChild(tr);
 function populateFilters(data){
 let getDropdownOpts = (key) => key ? [...new Set(data.map(d=> (d[key] || "").trim()).filter(Boolean))].sort() : [];
 
-let batches = headersContain("Batch") ? [...new Set(data.map(d=>d["Batch"]).filter(Boolean))].sort() : [];
+let batches = data.length > 0 && Object.keys(data[0]).includes("Batch") ? [...new Set(data.map(d=>d["Batch"]).filter(Boolean))].sort() : [];
 let natures = getDropdownOpts(natureKey);
 let offers = getDropdownOpts(natureOfOfferKey);
 let drives = getDropdownOpts(statusOfDriveKey);
 
 let totals = totalKey ? [...new Set(data.map(d => (d[totalKey] || "").trim()).filter(Boolean))].sort((a, b) => parseFloat(a) - parseFloat(b)) : [];
-
-function headersContain(str) {
-  return data.length > 0 && Object.keys(data[0]).includes(str);
-}
 
 let updateSelect = (id, list) => {
   let el = document.getElementById(id);
@@ -737,7 +743,7 @@ updateSelect("totalFilter", totals);
 function updateLiveMetrics(currentFilteredData) {
   let uniqueCompanies = new Set();
   let totalOffersSum = 0;
-  let sums = { civ: 0, eee: 0, mech: 0, ece: 0, cse: 0, it: 0, csm: 0, csd: 0, mct: 0, mtech: 0 };
+  let sums = { civ: 0, eee: 0, mech: 0, ece: 0, cse: 0, it: 0, csm: 0, csd: 0, mct: 0, csb: 0, mme: 0, mtech: 0 };
 
   currentFilteredData.forEach(row => {
     if (companyNameKey && row[companyNameKey]) {
@@ -770,6 +776,8 @@ function updateLiveMetrics(currentFilteredData) {
   setVal("statCsmOffers", sums.csm);
   setVal("statCsdOffers", sums.csd);
   setVal("statMctOffers", sums.mct);
+  setVal("statCsbOffers", sums.csb);
+  setVal("statMmeOffers", sums.mme);
   setVal("statMtechOffers", sums.mtech);
 }
 
