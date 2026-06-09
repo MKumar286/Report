@@ -164,7 +164,7 @@ align-items: center;
 gap: 8px;
 }
 
-/* STATS CARDS GRID CONTAINER */
+/* STATS CARDS GRID CONTAINER WITH SMOOTH SINGLE-ROW HORIZONTAL SCROLL */
 .stats-banner {
 display: flex;
 flex-wrap: nowrap;
@@ -187,7 +187,7 @@ border: 1px solid rgba(255,255,255,0.15);
 padding: 6px 14px;
 border-radius: 10px;
 text-align: center;
-min-width: 140px;
+min-width: 130px;
 box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
@@ -207,14 +207,14 @@ color: #ffffff;
 }
 
 .stats-divider {
-font-size: 14px;
+font-size: 13px;
 font-weight: bold;
 color: #b2ff59;
 text-transform: uppercase;
 letter-spacing: 1px;
 white-space: nowrap;
 flex: 0 0 auto;
-padding: 0 10px;
+padding: 0 12px;
 border-left: 2px solid rgba(255,255,255,0.2);
 height: 24px;
 display: flex;
@@ -491,6 +491,51 @@ justify-content: flex-start;
     <div class="card-label">CIV</div>
     <div class="card-value" id="statCivOffers">0</div>
   </div>
+
+  <div class="stat-card">
+    <div class="card-label">EEE</div>
+    <div class="card-value" id="statEeeOffers">0</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="card-label">MECH</div>
+    <div class="card-value" id="statMechOffers">0</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="card-label">ECE</div>
+    <div class="card-value" id="statEceOffers">0</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="card-label">CSE</div>
+    <div class="card-value" id="statCseOffers">0</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="card-label">IT</div>
+    <div class="card-value" id="statItOffers">0</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="card-label">CSM</div>
+    <div class="card-value" id="statCsmOffers">0</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="card-label">CSD</div>
+    <div class="card-value" id="statCsdOffers">0</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="card-label">MCT</div>
+    <div class="card-value" id="statMctOffers">0</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="card-label">M.Tech</div>
+    <div class="card-value" id="statMtechOffers">0</div>
+  </div>
 </div>
 
 <div class="filter-section controls">
@@ -541,7 +586,11 @@ let natureOfOfferKey="";
 let statusOfDriveKey="";
 let totalKey="";
 let companyNameKey="";
-let civKey="";
+
+// Structural reference pointer holders for all required analytics metrics keys
+let deptKeys = {
+  civ: "", eee: "", mech: "", ece: "", cse: "", it: "", csm: "", csd: "", mct: "", mtech: ""
+};
 
 /* INITIALIZE PARSING SEQUENCE */
 Papa.parse(csvURL,{
@@ -561,14 +610,24 @@ return;
 let headers = Object.keys(allData[0]);
 natureKey = headers.find(h => h.toLowerCase().includes("nature of the company")) || headers.find(h => h.toLowerCase().includes("nature"));
 
-// Dynamic mapping evaluation keys for custom required headers
+// Dynamic mapping evaluation keys for dropdown controllers
 natureOfOfferKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("natureofoffer")) || headers.find(h => h.toLowerCase().includes("nature of offer"));
 statusOfDriveKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("statusofthedrive")) || headers.find(h => h.toLowerCase().includes("status of the drive"));
 totalKey = headers.find(h => h.toLowerCase().trim() === "total");
-
-// Map target columns for real-time statistical metrics calculations
 companyNameKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("companyname")) || headers.find(h => h.toLowerCase().includes("company name")) || headers.find(h => h.toLowerCase().includes("company placed")) || "Company Placed";
-civKey = headers.find(h => h.toLowerCase().trim() === "civ");
+
+// Safe loose-match discovery loop for tracking individual department counters columns
+let getDeptKey = (token) => headers.find(h => h.toLowerCase().replace(/[\s\.\-_]/g, "") === token.toLowerCase().replace(/[\s\.\-_]/g, "")) || "";
+deptKeys.civ = getDeptKey("CIV");
+deptKeys.eee = getDeptKey("EEE");
+deptKeys.mech = getDeptKey("MECH");
+deptKeys.ece = getDeptKey("ECE");
+deptKeys.cse = getDeptKey("CSE");
+deptKeys.it = getDeptKey("IT");
+deptKeys.csm = getDeptKey("CSM");
+deptKeys.csd = getDeptKey("CSD");
+deptKeys.mct = getDeptKey("MCT");
+deptKeys.mtech = getDeptKey("M.Tech") || getDeptKey("MTech");
 
 campusDateKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("campusdate")) || headers.find(h => h.toLowerCase().includes("campus"));
 resultDateKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("resultdate")) || headers.find(h => h.toLowerCase().includes("result"));
@@ -669,27 +728,39 @@ if(natureKey) natures.forEach(v=>natureSelect.add(new Option(v,v)));
 totals.forEach(v=>totalSelect.add(new Option(v,v)));
 }
 
-/* DYNAMIC REAL-TIME METRICS CALCULATION SUB-ENGINE ROUTINE */
+/* REAL-TIME STATISTICAL ACCUMULATOR COMPILER */
 function updateLiveMetrics(currentFilteredData) {
-  // 1. Count Unique names from Company Name column target field
   let uniqueCompanies = new Set();
-  // 2. Count Sum of the structural cell numerical values extracted from CIV column
-  let civSum = 0;
+  
+  // Initialize summary count variables for all target blocks
+  let sums = { civ: 0, eee: 0, mech: 0, ece: 0, cse: 0, it: 0, csm: 0, csd: 0, mct: 0, mtech: 0 };
 
   currentFilteredData.forEach(row => {
     if (row[companyNameKey]) {
       uniqueCompanies.add(row[companyNameKey].toString().trim());
     }
-    if (civKey && row[civKey]) {
-      let numericalVal = parseFloat(row[civKey].toString().trim());
-      if (!isNaN(numericalVal)) {
-        civSum += numericalVal;
+    
+    // Accumulate parsed column cell values securely for each branch loop
+    Object.keys(sums).forEach(branch => {
+      let key = deptKeys[branch];
+      if (key && row[key]) {
+        let val = parseFloat(row[key].toString().trim());
+        if (!isNaN(val)) sums[branch] += val;
       }
-    }
+    });
   });
 
   document.getElementById("statTotalCompanies").innerText = uniqueCompanies.size;
-  document.getElementById("statCivOffers").innerText = civSum;
+  document.getElementById("statCivOffers").innerText = sums.civ;
+  document.getElementById("statEeeOffers").innerText = sums.eee;
+  document.getElementById("statMechOffers").innerText = sums.mech;
+  document.getElementById("statEceOffers").innerText = sums.ece;
+  document.getElementById("statCseOffers").innerText = sums.cse;
+  document.getElementById("statItOffers").innerText = sums.it;
+  document.getElementById("statCsmOffers").innerText = sums.csm;
+  document.getElementById("statCsdOffers").innerText = sums.csd;
+  document.getElementById("statMctOffers").innerText = sums.mct;
+  document.getElementById("statMtechOffers").innerText = sums.mtech;
 }
 
 /* CELL DATA DATE TRANSFORM ENGINE */
@@ -754,7 +825,7 @@ return text.includes(search)
 });
 
 buildTable(filtered);
-updateLiveMetrics(filtered); // Re-calculates totals instantly based on active user constraints 
+updateLiveMetrics(filtered);
 }
 
 /* EVENT BINDINGS SUBSYSTEM ROUTINES */
