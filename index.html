@@ -164,10 +164,10 @@ align-items: center;
 gap: 8px;
 }
 
-/* MODIFIED: NO-SCROLL COMPACT METRIC STATS BANNER FOR DESKTOPS */
+/* NO-SCROLL COMPACT METRIC STATS BANNER FOR DESKTOPS */
 .stats-banner {
 display: flex;
-flex-wrap: wrap; /* Allows wrap on tiny screens but stretches nicely as single row on desktop */
+flex-wrap: wrap;
 align-items: center;
 gap: 8px;
 background: rgba(0, 8, 20, 0.6);
@@ -178,20 +178,20 @@ border-bottom: 1px solid rgba(255,255,255,0.1);
 justify-content: space-between;
 }
 
-/* MODIFIED: AUTO-FIT CARDS MATCHING EXACT WIDTH OF THE TEXT INSIDE */
+/* AUTO-FIT CARDS MATCHING EXACT WIDTH OF THE TEXT INSIDE */
 .stat-card {
-flex: 1 1 auto; /* Grows and shrinks dynamically according to available container text boundaries */
+flex: 1 1 auto;
 background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03));
 border: 1px solid rgba(255,255,255,0.15);
-padding: 4px 8px; /* Compressed padding */
+padding: 4px 8px;
 border-radius: 8px;
 text-align: center;
-min-width: unset; /* Removed hard constraints to eliminate forcing scrollbars */
+min-width: unset;
 box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
 .stat-card .card-label {
-font-size: 9px; /* Optimized crisp typography dimensions */
+font-size: 9px;
 text-transform: uppercase;
 letter-spacing: 0.3px;
 color: #ffe082;
@@ -440,7 +440,7 @@ justify-content: flex-start;
 }
 
 .stats-banner {
-overflow-x: auto; /* Fallback overflow strictly for mobile screens to handle narrow viewports gracefully */
+overflow-x: auto;
 flex-wrap: nowrap;
 justify-content: flex-start;
 }
@@ -490,6 +490,11 @@ padding: 6px 12px;
   <div class="stat-card">
     <div class="card-label">Total Companies</div>
     <div class="card-value" id="statTotalCompanies">0</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="card-label">Total Offers</div>
+    <div class="card-value" id="statTotalOffers">0</div>
   </div>
   
   <div class="stats-divider">Dept. Offers</div>
@@ -738,6 +743,7 @@ totals.forEach(v=>totalSelect.add(new Option(v,v)));
 /* REAL-TIME STATISTICAL ACCUMULATOR COMPILER */
 function updateLiveMetrics(currentFilteredData) {
   let uniqueCompanies = new Set();
+  let totalOffersSum = 0;
   
   // Initialize summary count variables for all target blocks
   let sums = { civ: 0, eee: 0, mech: 0, ece: 0, cse: 0, it: 0, csm: 0, csd: 0, mct: 0, mtech: 0 };
@@ -746,109 +752,6 @@ function updateLiveMetrics(currentFilteredData) {
     if (row[companyNameKey]) {
       uniqueCompanies.add(row[companyNameKey].toString().trim());
     }
-    
-    // Accumulate parsed column cell values securely for each branch loop
-    Object.keys(sums).forEach(branch => {
-      let key = deptKeys[branch];
-      if (key && row[key]) {
-        let val = parseFloat(row[key].toString().trim());
-        if (!isNaN(val)) sums[branch] += val;
-      }
-    });
-  });
 
-  document.getElementById("statTotalCompanies").innerText = uniqueCompanies.size;
-  document.getElementById("statCivOffers").innerText = sums.civ;
-  document.getElementById("statEeeOffers").innerText = sums.eee;
-  document.getElementById("statMechOffers").innerText = sums.mech;
-  document.getElementById("statEceOffers").innerText = sums.ece;
-  document.getElementById("statCseOffers").innerText = sums.cse;
-  document.getElementById("statItOffers").innerText = sums.it;
-  document.getElementById("statCsmOffers").innerText = sums.csm;
-  document.getElementById("statCsdOffers").innerText = sums.csd;
-  document.getElementById("statMctOffers").innerText = sums.mct;
-  document.getElementById("statMtechOffers").innerText = sums.mtech;
-}
-
-/* CELL DATA DATE TRANSFORM ENGINE */
-function parseCellDate(dateStr) {
-if (!dateStr) return null;
-let parts = dateStr.toString().trim().split(/[\.\-\/]/);
-if (parts.length === 3) {
-let day = parseInt(parts[0], 10);
-let month = parseInt(parts[1], 10) - 1;
-let year = parseInt(parts[2], 10);
-if(year < 100) year += 2000;
-let d = new Date(year, month, day);
-return isNaN(d.getTime()) ? null : d;
-}
-return null;
-}
-
-/* PRIMARY SYSTEM FILTER COMPILER ROUTINE ENGINE */
-function applyFilters(){
-let search=document.getElementById("search").value.toLowerCase();
-let batch=document.getElementById("batchFilter").value;
-let offer=document.getElementById("natureOfOfferFilter").value;
-let drive=document.getElementById("statusOfDriveFilter").value;
-let nature = natureKey ? document.getElementById("natureFilter").value : "";
-let total=document.getElementById("totalFilter").value;
-
-let cStartVal = document.getElementById("campusStart").value;
-let cEndVal = document.getElementById("campusEnd").value;
-let rStartVal = document.getElementById("resultStart").value;
-let rEndVal = document.getElementById("resultEnd").value;
-
-let cStart = cStartVal ? new Date(cStartVal) : null;
-let cEnd = cEndVal ? new Date(cEndVal) : null;
-let rStart = rStartVal ? new Date(rStartVal) : null;
-let rEnd = rEndVal ? new Date(rEndVal) : null;
-
-if (cEnd) cEnd.setHours(23, 59, 59, 999);
-if (rEnd) rEnd.setHours(23, 59, 59, 999);
-
-let filtered=allData.filter(row=>{
-let text=JSON.stringify(row).toLowerCase();
-
-let cellCampusDate = campusDateKey ? parseCellDate(row[campusDateKey]) : null;
-let cellResultDate = resultDateKey ? parseCellDate(row[resultDateKey]) : null;
-
-let campusPass = true;
-if (cStart && (!cellCampusDate || cellCampusDate < cStart)) campusPass = false;
-if (cEnd && (!cellCampusDate || cellCampusDate > cEnd)) campusPass = false;
-
-let resultPass = true;
-if (rStart && (!cellResultDate || cellResultDate < rStart)) resultPass = false;
-if (rEnd && (!cellResultDate || cellResultDate > rEnd)) resultPass = false;
-
-return text.includes(search)
-&& (batch==="" || row["Batch"]===batch)
-&& (offer==="" || !natureOfOfferKey || (row[natureOfOfferKey] || "").trim()===offer)
-&& (drive==="" || !statusOfDriveKey || (row[statusOfDriveKey] || "").trim()===drive)
-&& (nature==="" || !natureKey || (row[natureKey] || "").trim()===nature)
-&& (total==="" || !totalKey || (row[totalKey] || "").trim()===total)
-&& campusPass
-&& resultPass;
-});
-
-buildTable(filtered);
-updateLiveMetrics(filtered);
-}
-
-/* EVENT BINDINGS SUBSYSTEM ROUTINES */
-document.getElementById("search").addEventListener("keyup",applyFilters);
-document.getElementById("batchFilter").addEventListener("change",applyFilters);
-document.getElementById("natureOfOfferFilter").addEventListener("change",applyFilters);
-document.getElementById("statusOfDriveFilter").addEventListener("change",applyFilters);
-document.getElementById("natureFilter").addEventListener("change",applyFilters);
-document.getElementById("totalFilter").addEventListener("change",applyFilters);
-
-document.getElementById("campusStart").addEventListener("change",applyFilters);
-document.getElementById("campusEnd").addEventListener("change",applyFilters);
-document.getElementById("resultStart").addEventListener("change",applyFilters);
-document.getElementById("resultEnd").addEventListener("change",applyFilters);
-
-</script>
-
-</body>
-</html>
+    // Accumulate running sum from Total column
+    if (
