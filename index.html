@@ -113,7 +113,6 @@ background:linear-gradient(90deg,#b2ff59,#00e5ff);
 display:flex;
 flex-wrap:nowrap;
 gap:12px;
-background:rgba(255,255,255,0.12);
 padding:8px 12px;
 backdrop-filter:blur(10px);
 box-shadow:0 6px 20px rgba(0,0,0,0.25);
@@ -125,14 +124,24 @@ scroll-behavior:smooth;
 align-items: center;
 }
 
-/* Top dates section layout alignment adjustments */
+/* ULTRA MIXED PREMIUM ANIMATED BACKGROUND SPECIFICALLY FOR THE DATE CONTAINER */
 .date-container {
-border-bottom: 1px solid rgba(255,255,255,0.08);
+background: linear-gradient(-45deg, #8e2de2, #4a00e0, #ff007f, #00c6ff);
+background-size: 300% 300%;
+animation: ultraMixedMove 8s ease infinite;
+border-bottom: 1px solid rgba(255,255,255,0.25);
 gap: 40px;
-justify-content: center; /* Centers the whole date component block inside the main row container */
+justify-content: center;
 }
 
-/* Vertical stacking layout for groups */
+/* Animation loop for Ultra Mixed Date Container background moving effect */
+@keyframes ultraMixedMove {
+0% { background-position: 0% 50%; }
+50% { background-position: 100% 50%; }
+100% { background-position: 0% 50%; }
+}
+
+/* Vertical stacking for individual Date filter sets */
 .date-group {
 display: flex;
 flex-direction: column;
@@ -140,15 +149,16 @@ gap: 5px;
 flex: 0 0 auto;
 }
 
-/* Center-align titles above their input groups */
+/* Center group headers nicely above fields */
 .date-group .group-title {
-font-size: 11px;
-font-weight: bold;
-color: #b2ff59;
+font-size: 12px;
+font-weight: 800;
+color: #ffffff;
+text-shadow: 0 2px 4px rgba(0,0,0,0.4);
 text-transform: uppercase;
-letter-spacing: 0.8px;
+letter-spacing: 1px;
 margin-bottom: 2px;
-text-align: center; /* Perfectly centers title above the boxes */
+text-align: center;
 }
 
 .date-inputs-row {
@@ -157,13 +167,14 @@ align-items: center;
 gap: 8px;
 }
 
-/* Bottom regular controls specific adjustments */
+/* Default styling fallback for basic Controls banner underneath */
 .controls {
+background:rgba(255,255,255,0.12);
 border-radius:0 0 14px 14px;
 margin-bottom:6px;
 }
 
-/* FILTERS */
+/* FILTERS ELEMENT STYLES */
 
 .filter-section input,
 .filter-section select{
@@ -189,7 +200,13 @@ white-space: nowrap;
 flex: 0 0 auto;
 }
 
-/* FOCUS */
+/* Date section labels overrides for better readability against mixed background colors */
+.date-container label {
+color: #ffffff;
+text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* FOCUS EFFECT */
 
 .filter-section input:focus,
 .filter-section select:focus{
@@ -322,7 +339,7 @@ transform:scale(1.06);
 background:linear-gradient(135deg,#43cea2,#185a9d);
 }
 
-/* MOBILE */
+/* MOBILE RESPONSIVE MEDIA BLOCK */
 
 @media(max-width:768px){
 
@@ -366,7 +383,7 @@ table{
 min-width:1400px;
 }
 
-/* Allow natural left alignment for scrollable viewports on tiny screens */
+/* Fallback alignments for handling smaller mobile screen viewport constraints */
 .date-container {
 justify-content: flex-start;
 }
@@ -449,7 +466,7 @@ justify-content: flex-start;
 
 <script>
 
-/* CSV URL */
+/* DATA STREAM TARGET SOURCE LINK */
 const csvURL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTsSEjHbgDDY4qkebT71u_FTTF3EFIQ2RHwVEkrc6oLpk0NhHEjK8rzGJHxVhb5sg/pub?gid=721834139&single=true&output=csv";
 
 let allData=[];
@@ -458,7 +475,7 @@ let internKey="";
 let campusDateKey="";
 let resultDateKey="";
 
-/* LOAD CSV */
+/* INITIALIZE PARSING SEQUENCE */
 Papa.parse(csvURL,{
 download:true,
 header:true,
@@ -477,7 +494,7 @@ let headers = Object.keys(allData[0]);
 natureKey = headers.find(h => h.toLowerCase().includes("nature"));
 internKey = headers.find(h => h.toLowerCase().includes("paid"));
 
-// Robust field selection parsing keys securely
+// Secure column indexing mapping configurations logic execution
 campusDateKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("campusdate")) || headers.find(h => h.toLowerCase().includes("campus"));
 resultDateKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("resultdate")) || headers.find(h => h.toLowerCase().includes("result"));
 
@@ -490,7 +507,7 @@ alert("CSV Loading Failed");
 }
 });
 
-/* BUILD TABLE */
+/* TABLE DOM INJECTOR GENERATOR */
 function buildTable(data){
 let thead=document.querySelector("#placementTable thead");
 let tbody=document.querySelector("#placementTable tbody");
@@ -506,7 +523,6 @@ return;
 let headers=Object.keys(data[0]);
 let tr=document.createElement("tr");
 
-/* HEADERS */
 headers.forEach(h=>{
 let th=document.createElement("th");
 th.innerText=h;
@@ -514,7 +530,6 @@ tr.appendChild(th);
 });
 thead.appendChild(tr);
 
-/* ROWS */
 data.forEach(row=>{
 let tr=document.createElement("tr");
 headers.forEach(h=>{
@@ -547,7 +562,7 @@ tbody.appendChild(tr);
 });
 }
 
-/* POPULATE FILTERS */
+/* INITIAL OPTION SELECTION POPULATOR SETUP */
 function populateFilters(data){
 let batches=[...new Set(data.map(d=>d["Batch"]).filter(Boolean))];
 let branches=[...new Set(data.map(d=>d["Branch"]).filter(Boolean))];
@@ -563,7 +578,6 @@ let natureSelect=document.getElementById("natureFilter");
 let internSelect=document.getElementById("internFilter");
 let genderSelect=document.getElementById("genderFilter");
 
-/* RESET */
 batchSelect.innerHTML='<option value="">All Batches</option>';
 branchSelect.innerHTML='<option value="">All Branches</option>';
 companySelect.innerHTML='<option value="">All Companies</option>';
@@ -571,7 +585,6 @@ natureSelect.innerHTML='<option value="">Nature of the Company</option>';
 internSelect.innerHTML='<option value="">Internship Type</option>';
 genderSelect.innerHTML='<option value="">All Genders</option>';
 
-/* ADD OPTIONS */
 batches.sort().forEach(v=>batchSelect.add(new Option(v,v)));
 branches.sort().forEach(v=>branchSelect.add(new Option(v,v)));
 companies.sort().forEach(v=>companySelect.add(new Option(v,v)));
@@ -593,7 +606,7 @@ companySelect.value = currentValue;
 }
 }
 
-/* HELPER: PARSE STRING DATES (SUPPORTS dd-mm-yyyy, dd.mm.yyyy, AND dd/mm/yyyy) TO NATIVE DATE OBJECTS */
+/* CELL DATA DATE TRANSFORM ENGINE (PARSES UNIFORM dd-mm-yyyy / dd.mm.yyyy formats) */
 function parseCellDate(dateStr) {
 if (!dateStr) return null;
 let parts = dateStr.toString().trim().split(/[\.\-\/]/);
@@ -601,14 +614,14 @@ if (parts.length === 3) {
 let day = parseInt(parts[0], 10);
 let month = parseInt(parts[1], 10) - 1;
 let year = parseInt(parts[2], 10);
-if(year < 100) year += 2000; 
+if(year < 100) year += 2000;
 let d = new Date(year, month, day);
 return isNaN(d.getTime()) ? null : d;
 }
 return null;
 }
 
-/* APPLY FILTERS */
+/* PRIMARY SYSTEM FILTER COMPILER ROUTINE ENGINE */
 function applyFilters(){
 let search=document.getElementById("search").value.toLowerCase();
 let batch=document.getElementById("batchFilter").value;
@@ -660,7 +673,7 @@ updateCompanyFilter(filtered);
 buildTable(filtered);
 }
 
-/* EVENTS */
+/* EVENT BINDINGS SUBSYSTEM ROUTINES */
 document.getElementById("search").addEventListener("keyup",applyFilters);
 document.getElementById("batchFilter").addEventListener("change",applyFilters);
 document.getElementById("branchFilter").addEventListener("change",applyFilters);
