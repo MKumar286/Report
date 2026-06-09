@@ -409,7 +409,8 @@ min-width:1400px;
 
 <script>
 
-/* CSV URL */
+/* EXPIRED / BREAKING GOOGLE SHEET LINK */
+// If your data doesn't load, update this link following File -> Share -> Publish to Web -> CSV
 const csvURL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTsSEjHbgDDY4qkebT71u_FTTF3EFIQ2RHwVEkrc6oLpk0NhHEjK8rzGJHxVhb5sg/pub?gid=721834139&single=true&output=csv";
 
 let allData=[];
@@ -418,39 +419,55 @@ let internKey="";
 let campusDateKey="";
 let resultDateKey="";
 
-/* LOAD CSV */
+/* FALLBACK MOCK DATA - PREVENTS CRASH IF GOOGLE LINKS ARE BROKEN */
+const fallbackData = [
+  {"Roll Number":"22261A0501","Student Name":"A. Rahul","Batch":"2026","Branch":"CSE","Company Placed":"TCS","Nature of the Company":"IT Service","Internship Type":"Paid","Gender":"Male","Campus Date":"12.03.2026","Result Date":"25.04.2026","Offer Letter":"https://httpbin.org/status/200"},
+  {"Roll Number":"22261A0405","Student Name":"B. Sneha","Batch":"2026","Branch":"ECE","Company Placed":"Cognizant","Nature of the Company":"Consulting","Internship Type":"Unpaid","Gender":"Female","Campus Date":"08.01.2026","Result Date":"15.02.2026","Offer Letter":"https://httpbin.org/status/200"},
+  {"Roll Number":"22261A1202","Student Name":"K. Vikas","Batch":"2025","Branch":"IT","Company Placed":"Amazon","Nature of the Company":"Product","Internship Type":"Paid","Gender":"Male","Campus Date":"20-04-2025","Result Date":"30-05-2025","Offer Letter":"https://httpbin.org/status/200"}
+];
+
+/* PARSE IMPLEMENTATION WITH DYNAMIC LIVE FALLBACKS */
 Papa.parse(csvURL,{
   download:true,
   header:true,
   skipEmptyLines:true,
   complete:function(results){
+    // Filter blank rows safely
     allData = results.data.filter(
       row => Object.values(row).join("").trim() !== ""
     );
 
-    if(allData.length === 0){
-      alert("No Data Found in CSV");
+    // If Google returned page errors (HTML text instead of CSV content)
+    if(allData.length === 0 || !Object.keys(allData[0]).join("").toLowerCase().includes("roll")){
+      console.warn("Google Sheet link formatting mismatch or locked file. Deploying clean structural fallback mock data.");
+      loadBackupDataset("Your Google Sheet link failed to return valid data columns. Displaying sample placement rows for testing. Please re-publish your Google sheet as a CSV!");
       return;
     }
 
-    let headers = Object.keys(allData[0]);
-    
-    natureKey = headers.find(h => h.toLowerCase().includes("nature")) || "";
-    internKey = headers.find(h => h.toLowerCase().includes("paid")) || "";
-    
-    // Fallback-friendly loose contains evaluation for Date Columns
-    campusDateKey = headers.find(h => h.toLowerCase().includes("campus")) || "";
-    resultDateKey = headers.find(h => h.toLowerCase().includes("result")) || "";
-
-    // Build base table structure securely first
-    buildTable(allData);
-    populateFilters(allData);
+    setupSheetKeys();
   },
   error:function(err){
-    console.error(err);
-    alert("CSV Loading Failed. Please verify internet connection or spreadsheet deployment updates.");
+    console.error("Critical link fetch block: ", err);
+    loadBackupDataset("Network blocking error or invalid link configuration. Displaying sample placement rows.");
   }
 });
+
+function loadBackupDataset(message) {
+  alert(message);
+  allData = fallbackData;
+  setupSheetKeys();
+}
+
+function setupSheetKeys() {
+  let headers = Object.keys(allData[0]);
+  natureKey = headers.find(h => h.toLowerCase().includes("nature")) || headers[4] || "";
+  internKey = headers.find(h => h.toLowerCase().includes("intern") || h.toLowerCase().includes("paid")) || headers[5] || "";
+  campusDateKey = headers.find(h => h.toLowerCase().includes("campus")) || "";
+  resultDateKey = headers.find(h => h.toLowerCase().includes("result")) || "";
+
+  buildTable(allData);
+  populateFilters(allData);
+}
 
 /* BUILD TABLE */
 function buildTable(data){
@@ -461,14 +478,13 @@ function buildTable(data){
   tbody.innerHTML="";
 
   if(data.length===0){
-    tbody.innerHTML="<tr><td colspan='20'>No Records Found Match Criteria</td></tr>";
+    tbody.innerHTML="<tr><td colspan='20' style='padding:20px; text-align:center; font-weight:bold;'>No Matching Records Found</td></tr>";
     return;
   }
 
   let headers=Object.keys(data[0]);
   let tr=document.createElement("tr");
 
-  /* HEADERS */
   headers.forEach(h=>{
     let th=document.createElement("th");
     th.innerText=h;
@@ -476,31 +492,26 @@ function buildTable(data){
   });
   thead.appendChild(tr);
 
-  /* ROWS */
   data.forEach(row=>{
     let tr=document.createElement("tr");
     headers.forEach(h=>{
       let td=document.createElement("td");
       let value = row[h] ? row[h].toString().trim() : "";
 
-      if(value.includes("http")){
+      if(value.toLowerCase().startsWith("http")){
         let a=document.createElement("a");
         a.href=value;
         a.target="_blank";
         a.className="link-btn";
-
         if(h.toLowerCase().includes("intern")){
           a.innerText="📄 Internship Letter";
-        }
-        else if(h.toLowerCase().includes("offer")){
+        } else if(h.toLowerCase().includes("offer")){
           a.innerText="📄 Offer Letter";
-        }
-        else{
+        } else {
           a.innerText="📄 View";
         }
         td.appendChild(a);
-      }
-      else{
+      } else {
         td.innerText=value;
       }
       tr.appendChild(td);
@@ -511,51 +522,46 @@ function buildTable(data){
 
 /* POPULATE FILTERS */
 function populateFilters(data){
-  let batches=[...new Set(data.map(d=>d["Batch"]).filter(Boolean))];
-  let branches=[...new Set(data.map(d=>d["Branch"]).filter(Boolean))];
-  let companies=[...new Set(data.map(d=>d["Company Placed"]).filter(Boolean))];
-  let natures=[...new Set(data.map(d => natureKey ? (d[natureKey] || "").trim() : "").filter(v=>v))];
-  let interns=[...new Set(data.map(d => internKey ? (d[internKey] || "").trim() : "").filter(v=>v))];
-  let genders=[...new Set(data.map(d => (d["Gender"] || "").trim()).filter(v=>v))];
+  let getOpt = (field) => [...new Set(data.map(d=>d[field]).filter(Boolean))].sort();
+  let getOptByKey = (key) => [...new Set(data.map(d=> key ? (d[key] || "").trim() : "").filter(Boolean))].sort();
 
-  let batchSelect=document.getElementById("batchFilter");
-  let branchSelect=document.getElementById("branchFilter");
-  let companySelect=document.getElementById("companyFilter");
-  let natureSelect=document.getElementById("natureFilter");
-  let internSelect=document.getElementById("internFilter");
-  let genderSelect=document.getElementById("genderFilter");
+  let batches = getOpt("Batch");
+  let branches = getOpt("Branch");
+  let companies = getOpt("Company Placed");
+  let natures = getOptByKey(natureKey);
+  let interns = getOptByKey(internKey);
+  let genders = getOpt("Gender");
 
-  /* RESET */
-  batchSelect.innerHTML='<option value="">All Batches</option>';
-  branchSelect.innerHTML='<option value="">All Branches</option>';
-  companySelect.innerHTML='<option value="">All Companies</option>';
-  natureSelect.innerHTML='<option value="">Nature of the Company</option>';
-  internSelect.innerHTML='<option value="">Internship Type</option>';
-  genderSelect.innerHTML='<option value="">All Genders</option>';
+  let updateSelect = (id, options, defaultText) => {
+    let el = document.getElementById(id);
+    if(!el) return;
+    el.innerHTML = `<option value="">${defaultText}</option>`;
+    options.forEach(v => el.add(new Option(v,v)));
+  };
 
-  /* ADD OPTIONS */
-  batches.sort().forEach(v=>batchSelect.add(new Option(v,v)));
-  branches.sort().forEach(v=>branchSelect.add(new Option(v,v)));
-  companies.sort().forEach(v=>companySelect.add(new Option(v,v)));
-  natures.sort().forEach(v=>natureSelect.add(new Option(v,v)));
-  interns.sort().forEach(v=>internSelect.add(new Option(v,v)));
-  genders.sort().forEach(v=>genderSelect.add(new Option(v,v)));
+  updateSelect("batchFilter", batches, "All Batches");
+  updateSelect("branchFilter", branches, "All Branches");
+  updateSelect("companyFilter", companies, "All Companies");
+  updateSelect("natureFilter", natures, "Nature of the Company");
+  updateSelect("internFilter", interns, "Internship Type");
+  updateSelect("genderFilter", genders, "All Genders");
 }
 
 function updateCompanyFilter(filteredData){
   let companySelect = document.getElementById("companyFilter");
+  if(!companySelect) return;
   let currentValue = companySelect.value;
-  let companies = [...new Set(filteredData.map(d => d["Company Placed"]).filter(Boolean))];
+  let companies = [...new Set(filteredData.map(d => d["Company Placed"]).filter(Boolean))].sort();
 
   companySelect.innerHTML = '<option value="">All Companies</option>';
-  companies.sort().forEach(v => companySelect.add(new Option(v,v)));
+  companies.forEach(v => companySelect.add(new Option(v,v)));
 
   if(companies.includes(currentValue)){
     companySelect.value = currentValue;
   }
 }
 
-/* HELPER: PARSE STRING DATES (SUPPORTS dd-mm-yyyy, dd.mm.yyyy, AND dd/mm/yyyy) */
+/* SAFEST DATE PARSER FUNCTION */
 function parseCellDate(dateStr) {
   if (!dateStr) return null;
   let parts = dateStr.toString().trim().split(/[\.\-\/]/);
@@ -563,9 +569,7 @@ function parseCellDate(dateStr) {
     let day = parseInt(parts[0], 10);
     let month = parseInt(parts[1], 10) - 1; 
     let year = parseInt(parts[2], 10);
-    
-    if(year < 100) year += 2000; // auto-correct 2 digit shorthand years
-
+    if(year < 100) year += 2000; 
     let d = new Date(year, month, day);
     return isNaN(d.getTime()) ? null : d;
   }
@@ -624,13 +628,13 @@ function applyFilters(){
   buildTable(filtered);
 }
 
-/* EVENTS */
+/* ATTACH LIVE LISTENERS */
 document.getElementById("search").addEventListener("keyup",applyFilters);
 document.getElementById("batchFilter").addEventListener("change",applyFilters);
 document.getElementById("branchFilter").addEventListener("change",applyFilters);
 document.getElementById("companyFilter").addEventListener("change",applyFilters);
-if(document.getElementById("natureFilter")) document.getElementById("natureFilter").addEventListener("change",applyFilters);
-if(document.getElementById("internFilter")) document.getElementById("internFilter").addEventListener("change",applyFilters);
+document.getElementById("natureFilter").addEventListener("change",applyFilters);
+document.getElementById("internFilter").addEventListener("change",applyFilters);
 document.getElementById("genderFilter").addEventListener("change",applyFilters);
 
 document.getElementById("campusStart").addEventListener("change",applyFilters);
