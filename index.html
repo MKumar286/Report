@@ -164,6 +164,63 @@ align-items: center;
 gap: 8px;
 }
 
+/* STATS CARDS GRID CONTAINER */
+.stats-banner {
+display: flex;
+flex-wrap: nowrap;
+align-items: center;
+gap: 15px;
+background: rgba(0, 8, 20, 0.6);
+padding: 10px 15px;
+border-left: 1px solid rgba(255,255,255,0.15);
+border-right: 1px solid rgba(255,255,255,0.15);
+border-bottom: 1px solid rgba(255,255,255,0.1);
+overflow-x: auto;
+overflow-y: hidden;
+scroll-behavior: smooth;
+}
+
+.stat-card {
+flex: 0 0 auto;
+background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03));
+border: 1px solid rgba(255,255,255,0.15);
+padding: 6px 14px;
+border-radius: 10px;
+text-align: center;
+min-width: 140px;
+box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.stat-card .card-label {
+font-size: 10px;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+color: #ffe082;
+font-weight: bold;
+margin-bottom: 2px;
+}
+
+.stat-card .card-value {
+font-size: 18px;
+font-weight: bold;
+color: #ffffff;
+}
+
+.stats-divider {
+font-size: 14px;
+font-weight: bold;
+color: #b2ff59;
+text-transform: uppercase;
+letter-spacing: 1px;
+white-space: nowrap;
+flex: 0 0 auto;
+padding: 0 10px;
+border-left: 2px solid rgba(255,255,255,0.2);
+height: 24px;
+display: flex;
+align-items: center;
+}
+
 .controls {
 background:rgba(255,255,255,0.12);
 border-radius:0 0 14px 14px;
@@ -212,16 +269,19 @@ border:1px solid #00c6ff;
 
 /* FILTER SCROLLBARS */
 
-.filter-section::-webkit-scrollbar{
+.filter-section::-webkit-scrollbar,
+.stats-banner::-webkit-scrollbar{
 height:6px;
 }
 
-.filter-section::-webkit-scrollbar-track{
+.filter-section::-webkit-scrollbar-track,
+.stats-banner::-webkit-scrollbar-track{
 background:rgba(255,255,255,0.08);
 border-radius:10px;
 }
 
-.filter-section::-webkit-scrollbar-thumb{
+.filter-section::-webkit-scrollbar-thumb,
+.stats-banner::-webkit-scrollbar-thumb{
 background:linear-gradient(90deg,#00c6ff,#0072ff);
 border-radius:10px;
 }
@@ -419,6 +479,20 @@ justify-content: flex-start;
 
 </div>
 
+<div class="stats-banner">
+  <div class="stat-card">
+    <div class="card-label">Total Companies</div>
+    <div class="card-value" id="statTotalCompanies">0</div>
+  </div>
+  
+  <div class="stats-divider">Dept. Offers</div>
+  
+  <div class="stat-card">
+    <div class="card-label">CIV</div>
+    <div class="card-value" id="statCivOffers">0</div>
+  </div>
+</div>
+
 <div class="filter-section controls">
 
 <input type="text" id="search" placeholder="Search student / roll / company">
@@ -441,10 +515,6 @@ justify-content: flex-start;
 
 <select id="totalFilter">
 <option value="">Total</option>
-</select>
-
-<select id="genderFilter">
-<option value="">All Genders</option>
 </select>
 
 </div>
@@ -470,6 +540,8 @@ let resultDateKey="";
 let natureOfOfferKey="";
 let statusOfDriveKey="";
 let totalKey="";
+let companyNameKey="";
+let civKey="";
 
 /* INITIALIZE PARSING SEQUENCE */
 Papa.parse(csvURL,{
@@ -494,11 +566,16 @@ natureOfOfferKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").inclu
 statusOfDriveKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("statusofthedrive")) || headers.find(h => h.toLowerCase().includes("status of the drive"));
 totalKey = headers.find(h => h.toLowerCase().trim() === "total");
 
+// Map target columns for real-time statistical metrics calculations
+companyNameKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("companyname")) || headers.find(h => h.toLowerCase().includes("company name")) || headers.find(h => h.toLowerCase().includes("company placed")) || "Company Placed";
+civKey = headers.find(h => h.toLowerCase().trim() === "civ");
+
 campusDateKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("campusdate")) || headers.find(h => h.toLowerCase().includes("campus"));
 resultDateKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("resultdate")) || headers.find(h => h.toLowerCase().includes("result"));
 
 buildTable(allData);
 populateFilters(allData);
+updateLiveMetrics(allData);
 },
 error:function(err){
 console.log(err);
@@ -565,12 +642,10 @@ tbody.appendChild(tr);
 function populateFilters(data){
 let batches=[...new Set(data.map(d=>d["Batch"]).filter(Boolean))].sort();
 let natures=[...new Set(data.map(d => natureKey ? (d[natureKey] || "").trim() : "").filter(v=>v))].sort();
-let genders=[...new Set(data.map(d => (d["Gender"] || "").trim()).filter(v=>v))].sort();
 
 let offers=[...new Set(data.map(d => natureOfOfferKey ? (d[natureOfOfferKey] || "").trim() : "").filter(v=>v))].sort();
 let drives=[...new Set(data.map(d => statusOfDriveKey ? (d[statusOfDriveKey] || "").trim() : "").filter(v=>v))].sort();
 
-// Quantitative Ascending Numeric sorting calculation array routine
 let totals=[...new Set(data.map(d => totalKey ? (d[totalKey] || "").trim() : "").filter(v=>v))].sort((a, b) => {
   return parseFloat(a) - parseFloat(b);
 });
@@ -580,21 +655,41 @@ let offerSelect=document.getElementById("natureOfOfferFilter");
 let driveSelect=document.getElementById("statusOfDriveFilter");
 let natureSelect=document.getElementById("natureFilter");
 let totalSelect=document.getElementById("totalFilter");
-let genderSelect=document.getElementById("genderFilter");
 
 batchSelect.innerHTML='<option value="">All Batches</option>';
 offerSelect.innerHTML='<option value="">Nature of Offer</option>';
 driveSelect.innerHTML='<option value="">Status of the Drive</option>';
 natureSelect.innerHTML='<option value="">Nature of the Company</option>';
 totalSelect.innerHTML='<option value="">Total</option>';
-genderSelect.innerHTML='<option value="">All Genders</option>';
 
 batches.forEach(v=>batchSelect.add(new Option(v,v)));
 offers.forEach(v=>offerSelect.add(new Option(v,v)));
 drives.forEach(v=>driveSelect.add(new Option(v,v)));
 if(natureKey) natures.forEach(v=>natureSelect.add(new Option(v,v)));
 totals.forEach(v=>totalSelect.add(new Option(v,v)));
-genders.forEach(v=>genderSelect.add(new Option(v,v)));
+}
+
+/* DYNAMIC REAL-TIME METRICS CALCULATION SUB-ENGINE ROUTINE */
+function updateLiveMetrics(currentFilteredData) {
+  // 1. Count Unique names from Company Name column target field
+  let uniqueCompanies = new Set();
+  // 2. Count Sum of the structural cell numerical values extracted from CIV column
+  let civSum = 0;
+
+  currentFilteredData.forEach(row => {
+    if (row[companyNameKey]) {
+      uniqueCompanies.add(row[companyNameKey].toString().trim());
+    }
+    if (civKey && row[civKey]) {
+      let numericalVal = parseFloat(row[civKey].toString().trim());
+      if (!isNaN(numericalVal)) {
+        civSum += numericalVal;
+      }
+    }
+  });
+
+  document.getElementById("statTotalCompanies").innerText = uniqueCompanies.size;
+  document.getElementById("statCivOffers").innerText = civSum;
 }
 
 /* CELL DATA DATE TRANSFORM ENGINE */
@@ -620,7 +715,6 @@ let offer=document.getElementById("natureOfOfferFilter").value;
 let drive=document.getElementById("statusOfDriveFilter").value;
 let nature = natureKey ? document.getElementById("natureFilter").value : "";
 let total=document.getElementById("totalFilter").value;
-let gender=document.getElementById("genderFilter").value;
 
 let cStartVal = document.getElementById("campusStart").value;
 let cEndVal = document.getElementById("campusEnd").value;
@@ -655,12 +749,12 @@ return text.includes(search)
 && (drive==="" || !statusOfDriveKey || (row[statusOfDriveKey] || "").trim()===drive)
 && (nature==="" || !natureKey || (row[natureKey] || "").trim()===nature)
 && (total==="" || !totalKey || (row[totalKey] || "").trim()===total)
-&& (gender==="" || (row["Gender"] || "").trim()===gender)
 && campusPass
 && resultPass;
 });
 
 buildTable(filtered);
+updateLiveMetrics(filtered); // Re-calculates totals instantly based on active user constraints 
 }
 
 /* EVENT BINDINGS SUBSYSTEM ROUTINES */
@@ -670,7 +764,6 @@ document.getElementById("natureOfOfferFilter").addEventListener("change",applyFi
 document.getElementById("statusOfDriveFilter").addEventListener("change",applyFilters);
 document.getElementById("natureFilter").addEventListener("change",applyFilters);
 document.getElementById("totalFilter").addEventListener("change",applyFilters);
-document.getElementById("genderFilter").addEventListener("change",applyFilters);
 
 document.getElementById("campusStart").addEventListener("change",applyFilters);
 document.getElementById("campusEnd").addEventListener("change",applyFilters);
