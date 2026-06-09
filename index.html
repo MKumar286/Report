@@ -125,9 +125,33 @@ scroll-behavior:smooth;
 align-items: center;
 }
 
-/* Top dates section specific adjustments */
+/* Top dates section layout alignment adjustments */
 .date-container {
 border-bottom: 1px solid rgba(255,255,255,0.08);
+gap: 35px;
+}
+
+/* Vertical stacking for Group Layout */
+.date-group {
+display: flex;
+flex-direction: column;
+gap: 4px;
+flex: 0 0 auto;
+}
+
+.date-group .group-title {
+font-size: 11px;
+font-weight: bold;
+color: #b2ff59;
+text-transform: uppercase;
+letter-spacing: 0.8px;
+margin-bottom: 2px;
+}
+
+.date-inputs-row {
+display: flex;
+align-items: center;
+gap: 8px;
 }
 
 /* Bottom regular controls specific adjustments */
@@ -160,8 +184,6 @@ font-weight: bold;
 color: #ffe082;
 white-space: nowrap;
 flex: 0 0 auto;
-text-transform: uppercase;
-letter-spacing: 0.5px;
 }
 
 /* FOCUS */
@@ -355,17 +377,27 @@ min-width:1400px;
 </div>
 
 <div class="filter-section date-container">
-<label>Campus Start:</label>
-<input type="date" id="campusStart" placeholder="dd/mm/yyyy">
 
-<label>Campus End:</label>
-<input type="date" id="campusEnd" placeholder="dd/mm/yyyy">
+  <div class="date-group">
+    <div class="group-title">Campus Date</div>
+    <div class="date-inputs-row">
+      <label>From:</label>
+      <input type="date" id="campusStart">
+      <label>To:</label>
+      <input type="date" id="campusEnd">
+    </div>
+  </div>
 
-<label style="margin-left: 20px;">Result Start:</label>
-<input type="date" id="resultStart" placeholder="dd/mm/yyyy">
+  <div class="date-group">
+    <div class="group-title">Result Date</div>
+    <div class="date-inputs-row">
+      <label>From:</label>
+      <input type="date" id="resultStart">
+      <label>To:</label>
+      <input type="date" id="resultEnd">
+    </div>
+  </div>
 
-<label>Result End:</label>
-<input type="date" id="resultEnd" placeholder="dd/mm/yyyy">
 </div>
 
 <div class="filter-section controls">
@@ -415,6 +447,8 @@ const csvURL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTsSEjHbgDDY4qkebT
 let allData=[];
 let natureKey="";
 let internKey="";
+let campusDateKey="";
+let resultDateKey="";
 
 /* LOAD CSV */
 Papa.parse(csvURL,{
@@ -434,6 +468,10 @@ return;
 let headers = Object.keys(allData[0]);
 natureKey = headers.find(h => h.toLowerCase().includes("nature"));
 internKey = headers.find(h => h.toLowerCase().includes("paid"));
+
+// Fault-tolerant dynamic extraction prevents breaking if the column naming pattern shifts
+campusDateKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("campusdate")) || headers.find(h => h.toLowerCase().includes("campus"));
+resultDateKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("resultdate")) || headers.find(h => h.toLowerCase().includes("result"));
 
 buildTable(allData);
 populateFilters(allData);
@@ -506,8 +544,8 @@ function populateFilters(data){
 let batches=[...new Set(data.map(d=>d["Batch"]).filter(Boolean))];
 let branches=[...new Set(data.map(d=>d["Branch"]).filter(Boolean))];
 let companies=[...new Set(data.map(d=>d["Company Placed"]).filter(Boolean))];
-let natures=[...new Set(data.map(d => (d[natureKey] || "").trim()).filter(v=>v))];
-let interns=[...new Set(data.map(d => (d[internKey] || "").trim()).filter(v=>v))];
+let natures=[...new Set(data.map(d => natureKey ? (d[natureKey] || "").trim() : "").filter(v=>v))];
+let interns=[...new Set(data.map(d => internKey ? (d[internKey] || "").trim() : "").filter(v=>v))];
 let genders=[...new Set(data.map(d => (d["Gender"] || "").trim()).filter(v=>v))];
 
 let batchSelect=document.getElementById("batchFilter");
@@ -529,8 +567,8 @@ genderSelect.innerHTML='<option value="">All Genders</option>';
 batches.sort().forEach(v=>batchSelect.add(new Option(v,v)));
 branches.sort().forEach(v=>branchSelect.add(new Option(v,v)));
 companies.sort().forEach(v=>companySelect.add(new Option(v,v)));
-natures.sort().forEach(v=>natureSelect.add(new Option(v,v)));
-interns.sort().forEach(v=>internSelect.add(new Option(v,v)));
+if(natureKey) natures.sort().forEach(v=>natureSelect.add(new Option(v,v)));
+if(internKey) interns.sort().forEach(v=>internSelect.add(new Option(v,v)));
 genders.sort().forEach(v=>genderSelect.add(new Option(v,v)));
 }
 
@@ -547,14 +585,15 @@ companySelect.value = currentValue;
 }
 }
 
-/* HELPER: PARSE STRING DATES (STRICTLY EXPECTING DD.MM.YYYY or DD/MM/YYYY) TO JS DATE OBJECT */
+/* HELPER: PARSE STRING DATES (SUPPORTS dd-mm-yyyy, dd.mm.yyyy, AND dd/mm/yyyy) TO NATIVE DATE OBJECTS */
 function parseCellDate(dateStr) {
 if (!dateStr) return null;
-let parts = dateStr.trim().split(/[\.\-\/]/);
+let parts = dateStr.toString().trim().split(/[\.\-\/]/);
 if (parts.length === 3) {
 let day = parseInt(parts[0], 10);
-let month = parseInt(parts[1], 10) - 1; // JS months are 0-11
+let month = parseInt(parts[1], 10) - 1;
 let year = parseInt(parts[2], 10);
+if(year < 100) year += 2000; 
 let d = new Date(year, month, day);
 return isNaN(d.getTime()) ? null : d;
 }
@@ -567,8 +606,8 @@ let search=document.getElementById("search").value.toLowerCase();
 let batch=document.getElementById("batchFilter").value;
 let branch=document.getElementById("branchFilter").value;
 let company=document.getElementById("companyFilter").value;
-let nature=document.getElementById("natureFilter").value;
-let intern=document.getElementById("internFilter").value;
+let nature = natureKey ? document.getElementById("natureFilter").value : "";
+let intern = internKey ? document.getElementById("internFilter").value : "";
 let gender=document.getElementById("genderFilter").value;
 
 let cStartVal = document.getElementById("campusStart").value;
@@ -587,8 +626,8 @@ if (rEnd) rEnd.setHours(23, 59, 59, 999);
 let filtered=allData.filter(row=>{
 let text=JSON.stringify(row).toLowerCase();
 
-let cellCampusDate = parseCellDate(row["Campus Date"]);
-let cellResultDate = parseCellDate(row["Result Date"]);
+let cellCampusDate = campusDateKey ? parseCellDate(row[campusDateKey]) : null;
+let cellResultDate = resultDateKey ? parseCellDate(row[resultDateKey]) : null;
 
 let campusPass = true;
 if (cStart && (!cellCampusDate || cellCampusDate < cStart)) campusPass = false;
@@ -602,8 +641,8 @@ return text.includes(search)
 && (batch==="" || row["Batch"]===batch)
 && (branch==="" || row["Branch"]===branch)
 && (company==="" || row["Company Placed"]===company)
-&& (nature==="" || (row[natureKey] || "").trim()===nature)
-&& (intern==="" || (row[internKey] || "").trim()===intern)
+&& (nature==="" || !natureKey || (row[natureKey] || "").trim()===nature)
+&& (intern==="" || !internKey || (row[internKey] || "").trim()===intern)
 && (gender==="" || (row["Gender"] || "").trim()===gender)
 && campusPass
 && resultPass;
