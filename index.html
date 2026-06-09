@@ -134,14 +134,12 @@ gap: 40px;
 justify-content: center;
 }
 
-/* Animation loop for Ultra Mixed Date Container background moving effect */
 @keyframes ultraMixedMove {
 0% { background-position: 0% 50%; }
 50% { background-position: 100% 50%; }
 100% { background-position: 0% 50%; }
 }
 
-/* Vertical stacking for individual Date filter sets */
 .date-group {
 display: flex;
 flex-direction: column;
@@ -149,7 +147,6 @@ gap: 5px;
 flex: 0 0 auto;
 }
 
-/* Center group headers nicely above fields */
 .date-group .group-title {
 font-size: 12px;
 font-weight: 800;
@@ -167,7 +164,6 @@ align-items: center;
 gap: 8px;
 }
 
-/* Default styling fallback for basic Controls banner underneath */
 .controls {
 background:rgba(255,255,255,0.12);
 border-radius:0 0 14px 14px;
@@ -200,7 +196,6 @@ white-space: nowrap;
 flex: 0 0 auto;
 }
 
-/* Date section labels overrides for better readability against mixed background colors */
 .date-container label {
 color: #ffffff;
 text-shadow: 0 1px 2px rgba(0,0,0,0.5);
@@ -383,7 +378,6 @@ table{
 min-width:1400px;
 }
 
-/* Fallback alignments for handling smaller mobile screen viewport constraints */
 .date-container {
 justify-content: flex-start;
 }
@@ -433,8 +427,8 @@ justify-content: flex-start;
 <option value="">All Batches</option>
 </select>
 
-<select id="branchFilter">
-<option value="">All Branches</option>
+<select id="natureOfOfferFilter">
+<option value="">Nature of Offer</option>
 </select>
 
 <select id="companyFilter">
@@ -474,6 +468,7 @@ let natureKey="";
 let internKey="";
 let campusDateKey="";
 let resultDateKey="";
+let natureOfOfferKey="";
 
 /* INITIALIZE PARSING SEQUENCE */
 Papa.parse(csvURL,{
@@ -491,10 +486,12 @@ return;
 }
 
 let headers = Object.keys(allData[0]);
-natureKey = headers.find(h => h.toLowerCase().includes("nature"));
+natureKey = headers.find(h => h.toLowerCase().includes("nature of the company")) || headers.find(h => h.toLowerCase().includes("nature"));
 internKey = headers.find(h => h.toLowerCase().includes("paid"));
 
-// Secure column indexing mapping configurations logic execution
+// Track custom keyword mappings for "Nature of Offer" column
+natureOfOfferKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("natureofoffer")) || headers.find(h => h.toLowerCase().includes("nature of offer"));
+
 campusDateKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("campusdate")) || headers.find(h => h.toLowerCase().includes("campus"));
 resultDateKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("resultdate")) || headers.find(h => h.toLowerCase().includes("result"));
 
@@ -565,28 +562,30 @@ tbody.appendChild(tr);
 /* INITIAL OPTION SELECTION POPULATOR SETUP */
 function populateFilters(data){
 let batches=[...new Set(data.map(d=>d["Batch"]).filter(Boolean))];
-let branches=[...new Set(data.map(d=>d["Branch"]).filter(Boolean))];
 let companies=[...new Set(data.map(d=>d["Company Placed"]).filter(Boolean))];
 let natures=[...new Set(data.map(d => natureKey ? (d[natureKey] || "").trim() : "").filter(v=>v))];
 let interns=[...new Set(data.map(d => internKey ? (d[internKey] || "").trim() : "").filter(v=>v))];
 let genders=[...new Set(data.map(d => (d["Gender"] || "").trim()).filter(v=>v))];
 
+// Fetch matching values specifically via calculated Nature of Offer column mapping
+let offers=[...new Set(data.map(d => natureOfOfferKey ? (d[natureOfOfferKey] || "").trim() : "").filter(v=>v))];
+
 let batchSelect=document.getElementById("batchFilter");
-let branchSelect=document.getElementById("branchFilter");
+let offerSelect=document.getElementById("natureOfOfferFilter");
 let companySelect=document.getElementById("companyFilter");
 let natureSelect=document.getElementById("natureFilter");
 let internSelect=document.getElementById("internFilter");
 let genderSelect=document.getElementById("genderFilter");
 
 batchSelect.innerHTML='<option value="">All Batches</option>';
-branchSelect.innerHTML='<option value="">All Branches</option>';
+offerSelect.innerHTML='<option value="">Nature of Offer</option>';
 companySelect.innerHTML='<option value="">All Companies</option>';
 natureSelect.innerHTML='<option value="">Nature of the Company</option>';
 internSelect.innerHTML='<option value="">Internship Type</option>';
 genderSelect.innerHTML='<option value="">All Genders</option>';
 
 batches.sort().forEach(v=>batchSelect.add(new Option(v,v)));
-branches.sort().forEach(v=>branchSelect.add(new Option(v,v)));
+offers.sort().forEach(v=>offerSelect.add(new Option(v,v)));
 companies.sort().forEach(v=>companySelect.add(new Option(v,v)));
 if(natureKey) natures.sort().forEach(v=>natureSelect.add(new Option(v,v)));
 if(internKey) interns.sort().forEach(v=>internSelect.add(new Option(v,v)));
@@ -606,7 +605,7 @@ companySelect.value = currentValue;
 }
 }
 
-/* CELL DATA DATE TRANSFORM ENGINE (PARSES UNIFORM dd-mm-yyyy / dd.mm.yyyy formats) */
+/* CELL DATA DATE TRANSFORM ENGINE */
 function parseCellDate(dateStr) {
 if (!dateStr) return null;
 let parts = dateStr.toString().trim().split(/[\.\-\/]/);
@@ -625,7 +624,7 @@ return null;
 function applyFilters(){
 let search=document.getElementById("search").value.toLowerCase();
 let batch=document.getElementById("batchFilter").value;
-let branch=document.getElementById("branchFilter").value;
+let offer=document.getElementById("natureOfOfferFilter").value;
 let company=document.getElementById("companyFilter").value;
 let nature = natureKey ? document.getElementById("natureFilter").value : "";
 let intern = internKey ? document.getElementById("internFilter").value : "";
@@ -660,7 +659,7 @@ if (rEnd && (!cellResultDate || cellResultDate > rEnd)) resultPass = false;
 
 return text.includes(search)
 && (batch==="" || row["Batch"]===batch)
-&& (branch==="" || row["Branch"]===branch)
+&& (offer==="" || !natureOfOfferKey || (row[natureOfOfferKey] || "").trim()===offer)
 && (company==="" || row["Company Placed"]===company)
 && (nature==="" || !natureKey || (row[natureKey] || "").trim()===nature)
 && (intern==="" || !internKey || (row[internKey] || "").trim()===intern)
@@ -676,7 +675,7 @@ buildTable(filtered);
 /* EVENT BINDINGS SUBSYSTEM ROUTINES */
 document.getElementById("search").addEventListener("keyup",applyFilters);
 document.getElementById("batchFilter").addEventListener("change",applyFilters);
-document.getElementById("branchFilter").addEventListener("change",applyFilters);
+document.getElementById("natureOfOfferFilter").addEventListener("change",applyFilters);
 document.getElementById("companyFilter").addEventListener("change",applyFilters);
 document.getElementById("natureFilter").addEventListener("change",applyFilters);
 document.getElementById("internFilter").addEventListener("change",applyFilters);
