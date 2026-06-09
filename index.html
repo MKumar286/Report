@@ -128,17 +128,19 @@ align-items: center;
 /* Top dates section layout alignment adjustments */
 .date-container {
 border-bottom: 1px solid rgba(255,255,255,0.08);
-gap: 35px;
+gap: 40px;
+justify-content: center; /* Centers the whole date component block inside the main row container */
 }
 
-/* Vertical stacking for Group Layout */
+/* Vertical stacking layout for groups */
 .date-group {
 display: flex;
 flex-direction: column;
-gap: 4px;
+gap: 5px;
 flex: 0 0 auto;
 }
 
+/* Center-align titles above their input groups */
 .date-group .group-title {
 font-size: 11px;
 font-weight: bold;
@@ -146,6 +148,7 @@ color: #b2ff59;
 text-transform: uppercase;
 letter-spacing: 0.8px;
 margin-bottom: 2px;
+text-align: center; /* Perfectly centers title above the boxes */
 }
 
 .date-inputs-row {
@@ -363,6 +366,11 @@ table{
 min-width:1400px;
 }
 
+/* Allow natural left alignment for scrollable viewports on tiny screens */
+.date-container {
+justify-content: flex-start;
+}
+
 }
 
 </style>
@@ -469,7 +477,7 @@ let headers = Object.keys(allData[0]);
 natureKey = headers.find(h => h.toLowerCase().includes("nature"));
 internKey = headers.find(h => h.toLowerCase().includes("paid"));
 
-// Fault-tolerant dynamic extraction prevents breaking if the column naming pattern shifts
+// Robust field selection parsing keys securely
 campusDateKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("campusdate")) || headers.find(h => h.toLowerCase().includes("campus"));
 resultDateKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("resultdate")) || headers.find(h => h.toLowerCase().includes("result"));
 
