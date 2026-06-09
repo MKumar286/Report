@@ -356,16 +356,16 @@ min-width:1400px;
 
 <div class="filter-section date-container">
 <label>Campus Start:</label>
-<input type="date" id="campusStart">
+<input type="date" id="campusStart" placeholder="dd/mm/yyyy">
 
 <label>Campus End:</label>
-<input type="date" id="campusEnd">
+<input type="date" id="campusEnd" placeholder="dd/mm/yyyy">
 
 <label style="margin-left: 20px;">Result Start:</label>
-<input type="date" id="resultStart">
+<input type="date" id="resultStart" placeholder="dd/mm/yyyy">
 
 <label>Result End:</label>
-<input type="date" id="resultEnd">
+<input type="date" id="resultEnd" placeholder="dd/mm/yyyy">
 </div>
 
 <div class="filter-section controls">
@@ -409,226 +409,211 @@ min-width:1400px;
 
 <script>
 
-/* EXPIRED / BREAKING GOOGLE SHEET LINK */
-// If your data doesn't load, update this link following File -> Share -> Publish to Web -> CSV
+/* CSV URL */
 const csvURL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTsSEjHbgDDY4qkebT71u_FTTF3EFIQ2RHwVEkrc6oLpk0NhHEjK8rzGJHxVhb5sg/pub?gid=721834139&single=true&output=csv";
 
 let allData=[];
 let natureKey="";
 let internKey="";
-let campusDateKey="";
-let resultDateKey="";
 
-/* FALLBACK MOCK DATA - PREVENTS CRASH IF GOOGLE LINKS ARE BROKEN */
-const fallbackData = [
-  {"Roll Number":"22261A0501","Student Name":"A. Rahul","Batch":"2026","Branch":"CSE","Company Placed":"TCS","Nature of the Company":"IT Service","Internship Type":"Paid","Gender":"Male","Campus Date":"12.03.2026","Result Date":"25.04.2026","Offer Letter":"https://httpbin.org/status/200"},
-  {"Roll Number":"22261A0405","Student Name":"B. Sneha","Batch":"2026","Branch":"ECE","Company Placed":"Cognizant","Nature of the Company":"Consulting","Internship Type":"Unpaid","Gender":"Female","Campus Date":"08.01.2026","Result Date":"15.02.2026","Offer Letter":"https://httpbin.org/status/200"},
-  {"Roll Number":"22261A1202","Student Name":"K. Vikas","Batch":"2025","Branch":"IT","Company Placed":"Amazon","Nature of the Company":"Product","Internship Type":"Paid","Gender":"Male","Campus Date":"20-04-2025","Result Date":"30-05-2025","Offer Letter":"https://httpbin.org/status/200"}
-];
-
-/* PARSE IMPLEMENTATION WITH DYNAMIC LIVE FALLBACKS */
+/* LOAD CSV */
 Papa.parse(csvURL,{
-  download:true,
-  header:true,
-  skipEmptyLines:true,
-  complete:function(results){
-    // Filter blank rows safely
-    allData = results.data.filter(
-      row => Object.values(row).join("").trim() !== ""
-    );
+download:true,
+header:true,
+skipEmptyLines:true,
+complete:function(results){
+allData = results.data.filter(
+row => Object.values(row).join("").trim() !== ""
+);
 
-    // If Google returned page errors (HTML text instead of CSV content)
-    if(allData.length === 0 || !Object.keys(allData[0]).join("").toLowerCase().includes("roll")){
-      console.warn("Google Sheet link formatting mismatch or locked file. Deploying clean structural fallback mock data.");
-      loadBackupDataset("Your Google Sheet link failed to return valid data columns. Displaying sample placement rows for testing. Please re-publish your Google sheet as a CSV!");
-      return;
-    }
+if(allData.length===0){
+alert("No Data Found");
+return;
+}
 
-    setupSheetKeys();
-  },
-  error:function(err){
-    console.error("Critical link fetch block: ", err);
-    loadBackupDataset("Network blocking error or invalid link configuration. Displaying sample placement rows.");
-  }
+let headers = Object.keys(allData[0]);
+natureKey = headers.find(h => h.toLowerCase().includes("nature"));
+internKey = headers.find(h => h.toLowerCase().includes("paid"));
+
+buildTable(allData);
+populateFilters(allData);
+},
+error:function(err){
+console.log(err);
+alert("CSV Loading Failed");
+}
 });
-
-function loadBackupDataset(message) {
-  alert(message);
-  allData = fallbackData;
-  setupSheetKeys();
-}
-
-function setupSheetKeys() {
-  let headers = Object.keys(allData[0]);
-  natureKey = headers.find(h => h.toLowerCase().includes("nature")) || headers[4] || "";
-  internKey = headers.find(h => h.toLowerCase().includes("intern") || h.toLowerCase().includes("paid")) || headers[5] || "";
-  campusDateKey = headers.find(h => h.toLowerCase().includes("campus")) || "";
-  resultDateKey = headers.find(h => h.toLowerCase().includes("result")) || "";
-
-  buildTable(allData);
-  populateFilters(allData);
-}
 
 /* BUILD TABLE */
 function buildTable(data){
-  let thead=document.querySelector("#placementTable thead");
-  let tbody=document.querySelector("#placementTable tbody");
+let thead=document.querySelector("#placementTable thead");
+let tbody=document.querySelector("#placementTable tbody");
 
-  thead.innerHTML="";
-  tbody.innerHTML="";
+thead.innerHTML="";
+tbody.innerHTML="";
 
-  if(data.length===0){
-    tbody.innerHTML="<tr><td colspan='20' style='padding:20px; text-align:center; font-weight:bold;'>No Matching Records Found</td></tr>";
-    return;
-  }
+if(data.length===0){
+tbody.innerHTML="<tr><td colspan='20'>No Records Found</td></tr>";
+return;
+}
 
-  let headers=Object.keys(data[0]);
-  let tr=document.createElement("tr");
+let headers=Object.keys(data[0]);
+let tr=document.createElement("tr");
 
-  headers.forEach(h=>{
-    let th=document.createElement("th");
-    th.innerText=h;
-    tr.appendChild(th);
-  });
-  thead.appendChild(tr);
+/* HEADERS */
+headers.forEach(h=>{
+let th=document.createElement("th");
+th.innerText=h;
+tr.appendChild(th);
+});
+thead.appendChild(tr);
 
-  data.forEach(row=>{
-    let tr=document.createElement("tr");
-    headers.forEach(h=>{
-      let td=document.createElement("td");
-      let value = row[h] ? row[h].toString().trim() : "";
+/* ROWS */
+data.forEach(row=>{
+let tr=document.createElement("tr");
+headers.forEach(h=>{
+let td=document.createElement("td");
+let value = row[h] ? row[h].toString().trim() : "";
 
-      if(value.toLowerCase().startsWith("http")){
-        let a=document.createElement("a");
-        a.href=value;
-        a.target="_blank";
-        a.className="link-btn";
-        if(h.toLowerCase().includes("intern")){
-          a.innerText="📄 Internship Letter";
-        } else if(h.toLowerCase().includes("offer")){
-          a.innerText="📄 Offer Letter";
-        } else {
-          a.innerText="📄 View";
-        }
-        td.appendChild(a);
-      } else {
-        td.innerText=value;
-      }
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
+if(value.includes("http")){
+let a=document.createElement("a");
+a.href=value;
+a.target="_blank";
+a.className="link-btn";
+
+if(h.toLowerCase().includes("intern")){
+a.innerText="📄 Internship Letter";
+}
+else if(h.toLowerCase().includes("offer")){
+a.innerText="📄 Offer Letter";
+}
+else{
+a.innerText="📄 View";
+}
+td.appendChild(a);
+}
+else{
+td.innerText=value;
+}
+tr.appendChild(td);
+});
+tbody.appendChild(tr);
+});
 }
 
 /* POPULATE FILTERS */
 function populateFilters(data){
-  let getOpt = (field) => [...new Set(data.map(d=>d[field]).filter(Boolean))].sort();
-  let getOptByKey = (key) => [...new Set(data.map(d=> key ? (d[key] || "").trim() : "").filter(Boolean))].sort();
+let batches=[...new Set(data.map(d=>d["Batch"]).filter(Boolean))];
+let branches=[...new Set(data.map(d=>d["Branch"]).filter(Boolean))];
+let companies=[...new Set(data.map(d=>d["Company Placed"]).filter(Boolean))];
+let natures=[...new Set(data.map(d => (d[natureKey] || "").trim()).filter(v=>v))];
+let interns=[...new Set(data.map(d => (d[internKey] || "").trim()).filter(v=>v))];
+let genders=[...new Set(data.map(d => (d["Gender"] || "").trim()).filter(v=>v))];
 
-  let batches = getOpt("Batch");
-  let branches = getOpt("Branch");
-  let companies = getOpt("Company Placed");
-  let natures = getOptByKey(natureKey);
-  let interns = getOptByKey(internKey);
-  let genders = getOpt("Gender");
+let batchSelect=document.getElementById("batchFilter");
+let branchSelect=document.getElementById("branchFilter");
+let companySelect=document.getElementById("companyFilter");
+let natureSelect=document.getElementById("natureFilter");
+let internSelect=document.getElementById("internFilter");
+let genderSelect=document.getElementById("genderFilter");
 
-  let updateSelect = (id, options, defaultText) => {
-    let el = document.getElementById(id);
-    if(!el) return;
-    el.innerHTML = `<option value="">${defaultText}</option>`;
-    options.forEach(v => el.add(new Option(v,v)));
-  };
+/* RESET */
+batchSelect.innerHTML='<option value="">All Batches</option>';
+branchSelect.innerHTML='<option value="">All Branches</option>';
+companySelect.innerHTML='<option value="">All Companies</option>';
+natureSelect.innerHTML='<option value="">Nature of the Company</option>';
+internSelect.innerHTML='<option value="">Internship Type</option>';
+genderSelect.innerHTML='<option value="">All Genders</option>';
 
-  updateSelect("batchFilter", batches, "All Batches");
-  updateSelect("branchFilter", branches, "All Branches");
-  updateSelect("companyFilter", companies, "All Companies");
-  updateSelect("natureFilter", natures, "Nature of the Company");
-  updateSelect("internFilter", interns, "Internship Type");
-  updateSelect("genderFilter", genders, "All Genders");
+/* ADD OPTIONS */
+batches.sort().forEach(v=>batchSelect.add(new Option(v,v)));
+branches.sort().forEach(v=>branchSelect.add(new Option(v,v)));
+companies.sort().forEach(v=>companySelect.add(new Option(v,v)));
+natures.sort().forEach(v=>natureSelect.add(new Option(v,v)));
+interns.sort().forEach(v=>internSelect.add(new Option(v,v)));
+genders.sort().forEach(v=>genderSelect.add(new Option(v,v)));
 }
 
 function updateCompanyFilter(filteredData){
-  let companySelect = document.getElementById("companyFilter");
-  if(!companySelect) return;
-  let currentValue = companySelect.value;
-  let companies = [...new Set(filteredData.map(d => d["Company Placed"]).filter(Boolean))].sort();
+let companySelect = document.getElementById("companyFilter");
+let currentValue = companySelect.value;
+let companies = [...new Set(filteredData.map(d => d["Company Placed"]).filter(Boolean))];
 
-  companySelect.innerHTML = '<option value="">All Companies</option>';
-  companies.forEach(v => companySelect.add(new Option(v,v)));
+companySelect.innerHTML = '<option value="">All Companies</option>';
+companies.sort().forEach(v => companySelect.add(new Option(v,v)));
 
-  if(companies.includes(currentValue)){
-    companySelect.value = currentValue;
-  }
+if(companies.includes(currentValue)){
+companySelect.value = currentValue;
+}
 }
 
-/* SAFEST DATE PARSER FUNCTION */
+/* HELPER: PARSE STRING DATES (STRICTLY EXPECTING DD.MM.YYYY or DD/MM/YYYY) TO JS DATE OBJECT */
 function parseCellDate(dateStr) {
-  if (!dateStr) return null;
-  let parts = dateStr.toString().trim().split(/[\.\-\/]/);
-  if (parts.length === 3) {
-    let day = parseInt(parts[0], 10);
-    let month = parseInt(parts[1], 10) - 1; 
-    let year = parseInt(parts[2], 10);
-    if(year < 100) year += 2000; 
-    let d = new Date(year, month, day);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  return null;
+if (!dateStr) return null;
+let parts = dateStr.trim().split(/[\.\-\/]/);
+if (parts.length === 3) {
+let day = parseInt(parts[0], 10);
+let month = parseInt(parts[1], 10) - 1; // JS months are 0-11
+let year = parseInt(parts[2], 10);
+let d = new Date(year, month, day);
+return isNaN(d.getTime()) ? null : d;
+}
+return null;
 }
 
 /* APPLY FILTERS */
 function applyFilters(){
-  let search=document.getElementById("search").value.toLowerCase();
-  let batch=document.getElementById("batchFilter").value;
-  let branch=document.getElementById("branchFilter").value;
-  let company=document.getElementById("companyFilter").value;
-  let nature=natureKey ? document.getElementById("natureFilter").value : "";
-  let intern=internKey ? document.getElementById("internFilter").value : "";
-  let gender=document.getElementById("genderFilter").value;
+let search=document.getElementById("search").value.toLowerCase();
+let batch=document.getElementById("batchFilter").value;
+let branch=document.getElementById("branchFilter").value;
+let company=document.getElementById("companyFilter").value;
+let nature=document.getElementById("natureFilter").value;
+let intern=document.getElementById("internFilter").value;
+let gender=document.getElementById("genderFilter").value;
 
-  let cStartVal = document.getElementById("campusStart").value;
-  let cEndVal = document.getElementById("campusEnd").value;
-  let rStartVal = document.getElementById("resultStart").value;
-  let rEndVal = document.getElementById("resultEnd").value;
+let cStartVal = document.getElementById("campusStart").value;
+let cEndVal = document.getElementById("campusEnd").value;
+let rStartVal = document.getElementById("resultStart").value;
+let rEndVal = document.getElementById("resultEnd").value;
 
-  let cStart = cStartVal ? new Date(cStartVal) : null;
-  let cEnd = cEndVal ? new Date(cEndVal) : null;
-  let rStart = rStartVal ? new Date(rStartVal) : null;
-  let rEnd = rEndVal ? new Date(rEndVal) : null;
+let cStart = cStartVal ? new Date(cStartVal) : null;
+let cEnd = cEndVal ? new Date(cEndVal) : null;
+let rStart = rStartVal ? new Date(rStartVal) : null;
+let rEnd = rEndVal ? new Date(rEndVal) : null;
 
-  if (cEnd) cEnd.setHours(23, 59, 59, 999);
-  if (rEnd) rEnd.setHours(23, 59, 59, 999);
+if (cEnd) cEnd.setHours(23, 59, 59, 999);
+if (rEnd) rEnd.setHours(23, 59, 59, 999);
 
-  let filtered=allData.filter(row=>{
-    let text=JSON.stringify(row).toLowerCase();
+let filtered=allData.filter(row=>{
+let text=JSON.stringify(row).toLowerCase();
 
-    let cellCampusDate = campusDateKey ? parseCellDate(row[campusDateKey]) : null;
-    let cellResultDate = resultDateKey ? parseCellDate(row[resultDateKey]) : null;
+let cellCampusDate = parseCellDate(row["Campus Date"]);
+let cellResultDate = parseCellDate(row["Result Date"]);
 
-    let campusPass = true;
-    if (cStart && (!cellCampusDate || cellCampusDate < cStart)) campusPass = false;
-    if (cEnd && (!cellCampusDate || cellCampusDate > cEnd)) campusPass = false;
+let campusPass = true;
+if (cStart && (!cellCampusDate || cellCampusDate < cStart)) campusPass = false;
+if (cEnd && (!cellCampusDate || cellCampusDate > cEnd)) campusPass = false;
 
-    let resultPass = true;
-    if (rStart && (!cellResultDate || cellResultDate < rStart)) resultPass = false;
-    if (rEnd && (!cellResultDate || cellResultDate > rEnd)) resultPass = false;
+let resultPass = true;
+if (rStart && (!cellResultDate || cellResultDate < rStart)) resultPass = false;
+if (rEnd && (!cellResultDate || cellResultDate > rEnd)) resultPass = false;
 
-    return text.includes(search)
-    && (batch==="" || row["Batch"]===batch)
-    && (branch==="" || row["Branch"]===branch)
-    && (company==="" || row["Company Placed"]===company)
-    && (nature==="" || !natureKey || (row[natureKey] || "").trim()===nature)
-    && (intern==="" || !internKey || (row[internKey] || "").trim()===intern)
-    && (gender==="" || (row["Gender"] || "").trim()===gender)
-    && campusPass
-    && resultPass;
-  });
+return text.includes(search)
+&& (batch==="" || row["Batch"]===batch)
+&& (branch==="" || row["Branch"]===branch)
+&& (company==="" || row["Company Placed"]===company)
+&& (nature==="" || (row[natureKey] || "").trim()===nature)
+&& (intern==="" || (row[internKey] || "").trim()===intern)
+&& (gender==="" || (row["Gender"] || "").trim()===gender)
+&& campusPass
+&& resultPass;
+});
 
-  updateCompanyFilter(filtered);
-  buildTable(filtered);
+updateCompanyFilter(filtered);
+buildTable(filtered);
 }
 
-/* ATTACH LIVE LISTENERS */
+/* EVENTS */
 document.getElementById("search").addEventListener("keyup",applyFilters);
 document.getElementById("batchFilter").addEventListener("change",applyFilters);
 document.getElementById("branchFilter").addEventListener("change",applyFilters);
