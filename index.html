@@ -107,16 +107,14 @@ background:linear-gradient(90deg,#b2ff59,#00e5ff);
 -webkit-text-fill-color:transparent;
 }
 
-/* FILTER SECTION */
+/* FILTER SECTION GENERAL */
 
-.controls{
-margin-bottom:6px;
+.filter-section {
 display:flex;
 flex-wrap:nowrap;
-gap:6px;
+gap:12px;
 background:rgba(255,255,255,0.12);
-padding:6px 8px;
-border-radius:0 0 14px 14px;
+padding:8px 12px;
 backdrop-filter:blur(10px);
 box-shadow:0 6px 20px rgba(0,0,0,0.25);
 border:1px solid rgba(255,255,255,0.15);
@@ -127,10 +125,21 @@ scroll-behavior:smooth;
 align-items: center;
 }
 
+/* Top dates section specific adjustments */
+.date-container {
+border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Bottom regular controls specific adjustments */
+.controls {
+border-radius:0 0 14px 14px;
+margin-bottom:6px;
+}
+
 /* FILTERS */
 
-.controls input,
-.controls select{
+.filter-section input,
+.filter-section select{
 flex:0 0 auto;
 width:170px;
 min-width:170px;
@@ -145,37 +154,37 @@ transition:0.3s;
 color: #222;
 }
 
-/* Adjust labels style inside filter bar */
-.controls label {
+.filter-section label {
 font-size: 11px;
 font-weight: bold;
-color: #fff;
+color: #ffe082;
 white-space: nowrap;
 flex: 0 0 auto;
-margin-left: 4px;
+text-transform: uppercase;
+letter-spacing: 0.5px;
 }
 
 /* FOCUS */
 
-.controls input:focus,
-.controls select:focus{
+.filter-section input:focus,
+.filter-section select:focus{
 transform:scale(1.02);
 box-shadow:0 0 10px rgba(255,255,255,0.5);
 border:1px solid #00c6ff;
 }
 
-/* FILTER SCROLLBAR */
+/* FILTER SCROLLBARS */
 
-.controls::-webkit-scrollbar{
-height:7px;
+.filter-section::-webkit-scrollbar{
+height:6px;
 }
 
-.controls::-webkit-scrollbar-track{
+.filter-section::-webkit-scrollbar-track{
 background:rgba(255,255,255,0.08);
 border-radius:10px;
 }
 
-.controls::-webkit-scrollbar-thumb{
+.filter-section::-webkit-scrollbar-thumb{
 background:linear-gradient(90deg,#00c6ff,#0072ff);
 border-radius:10px;
 }
@@ -304,13 +313,13 @@ h3{
 font-size:15px;
 }
 
-.controls{
-padding:5px;
-gap:5px;
+.filter-section{
+padding:6px 8px;
+gap:8px;
 }
 
-.controls input,
-.controls select{
+.filter-section input,
+.filter-section select{
 width:145px;
 min-width:145px;
 height:28px;
@@ -345,7 +354,21 @@ min-width:1400px;
 <h3>Academic Year 2025 - 2026</h3>
 </div>
 
-<div class="controls">
+<div class="filter-section date-container">
+<label>Campus Start:</label>
+<input type="date" id="campusStart">
+
+<label>Campus End:</label>
+<input type="date" id="campusEnd">
+
+<label style="margin-left: 20px;">Result Start:</label>
+<input type="date" id="resultStart">
+
+<label>Result End:</label>
+<input type="date" id="resultEnd">
+</div>
+
+<div class="filter-section controls">
 
 <input type="text" id="search" placeholder="Search student / roll / company">
 
@@ -372,18 +395,6 @@ min-width:1400px;
 <select id="genderFilter">
 <option value="">All Genders</option>
 </select>
-
-<label>Campus Start:</label>
-<input type="date" id="campusStart">
-
-<label>Campus End:</label>
-<input type="date" id="campusEnd">
-
-<label>Result Start:</label>
-<input type="date" id="resultStart">
-
-<label>Result End:</label>
-<input type="date" id="resultEnd">
 
 </div>
 
@@ -539,11 +550,10 @@ companySelect.value = currentValue;
 /* HELPER: PARSE STRING DATES (DD.MM.YYYY or DD-MM-YYYY) TO JS DATE OBJECT */
 function parseCellDate(dateStr) {
 if (!dateStr) return null;
-// Splitting formats like "08.09.2026" or "08-09-2026"
 let parts = dateStr.trim().split(/[\.\-\/]/);
 if (parts.length === 3) {
 let day = parseInt(parts[0], 10);
-let month = parseInt(parts[1], 10) - 1; // JS months are 0-11
+let month = parseInt(parts[1], 10) - 1;
 let year = parseInt(parts[2], 10);
 let d = new Date(year, month, day);
 return isNaN(d.getTime()) ? null : d;
@@ -561,7 +571,6 @@ let nature=document.getElementById("natureFilter").value;
 let intern=document.getElementById("internFilter").value;
 let gender=document.getElementById("genderFilter").value;
 
-// Get input dates (HTML value format is YYYY-MM-DD)
 let cStartVal = document.getElementById("campusStart").value;
 let cEndVal = document.getElementById("campusEnd").value;
 let rStartVal = document.getElementById("resultStart").value;
@@ -572,14 +581,12 @@ let cEnd = cEndVal ? new Date(cEndVal) : null;
 let rStart = rStartVal ? new Date(rStartVal) : null;
 let rEnd = rEndVal ? new Date(rEndVal) : null;
 
-// Normalize end dates to the last millisecond of the day to stay inclusive
 if (cEnd) cEnd.setHours(23, 59, 59, 999);
 if (rEnd) rEnd.setHours(23, 59, 59, 999);
 
 let filtered=allData.filter(row=>{
 let text=JSON.stringify(row).toLowerCase();
 
-// Process Date Filters
 let cellCampusDate = parseCellDate(row["Campus Date"]);
 let cellResultDate = parseCellDate(row["Result Date"]);
 
@@ -615,7 +622,6 @@ document.getElementById("natureFilter").addEventListener("change",applyFilters);
 document.getElementById("internFilter").addEventListener("change",applyFilters);
 document.getElementById("genderFilter").addEventListener("change",applyFilters);
 
-// Add event listeners for the new date filters
 document.getElementById("campusStart").addEventListener("change",applyFilters);
 document.getElementById("campusEnd").addEventListener("change",applyFilters);
 document.getElementById("resultStart").addEventListener("change",applyFilters);
