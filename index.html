@@ -431,16 +431,16 @@ justify-content: flex-start;
 <option value="">Nature of Offer</option>
 </select>
 
-<select id="companyFilter">
-<option value="">All Companies</option>
+<select id="statusOfDriveFilter">
+<option value="">Status of the Drive</option>
 </select>
 
 <select id="natureFilter">
 <option value="">Nature of the Company</option>
 </select>
 
-<select id="internFilter">
-<option value="">Internship Type</option>
+<select id="totalFilter">
+<option value="">Total</option>
 </select>
 
 <select id="genderFilter">
@@ -465,10 +465,11 @@ const csvURL="https://docs.google.com/spreadsheets/d/e/2PACX-1vTsSEjHbgDDY4qkebT
 
 let allData=[];
 let natureKey="";
-let internKey="";
 let campusDateKey="";
 let resultDateKey="";
 let natureOfOfferKey="";
+let statusOfDriveKey="";
+let totalKey="";
 
 /* INITIALIZE PARSING SEQUENCE */
 Papa.parse(csvURL,{
@@ -487,10 +488,11 @@ return;
 
 let headers = Object.keys(allData[0]);
 natureKey = headers.find(h => h.toLowerCase().includes("nature of the company")) || headers.find(h => h.toLowerCase().includes("nature"));
-internKey = headers.find(h => h.toLowerCase().includes("paid"));
 
-// Track custom keyword mappings for "Nature of Offer" column
+// Dynamic mapping evaluation keys for custom required headers
 natureOfOfferKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("natureofoffer")) || headers.find(h => h.toLowerCase().includes("nature of offer"));
+statusOfDriveKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("statusofthedrive")) || headers.find(h => h.toLowerCase().includes("status of the drive"));
+totalKey = headers.find(h => h.toLowerCase().trim() === "total");
 
 campusDateKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("campusdate")) || headers.find(h => h.toLowerCase().includes("campus"));
 resultDateKey = headers.find(h => h.toLowerCase().replace(/[\s_]/g, "").includes("resultdate")) || headers.find(h => h.toLowerCase().includes("result"));
@@ -561,48 +563,38 @@ tbody.appendChild(tr);
 
 /* INITIAL OPTION SELECTION POPULATOR SETUP */
 function populateFilters(data){
-let batches=[...new Set(data.map(d=>d["Batch"]).filter(Boolean))];
-let companies=[...new Set(data.map(d=>d["Company Placed"]).filter(Boolean))];
-let natures=[...new Set(data.map(d => natureKey ? (d[natureKey] || "").trim() : "").filter(v=>v))];
-let interns=[...new Set(data.map(d => internKey ? (d[internKey] || "").trim() : "").filter(v=>v))];
-let genders=[...new Set(data.map(d => (d["Gender"] || "").trim()).filter(v=>v))];
+let batches=[...new Set(data.map(d=>d["Batch"]).filter(Boolean))].sort();
+let natures=[...new Set(data.map(d => natureKey ? (d[natureKey] || "").trim() : "").filter(v=>v))].sort();
+let genders=[...new Set(data.map(d => (d["Gender"] || "").trim()).filter(v=>v))].sort();
 
-// Fetch matching values specifically via calculated Nature of Offer column mapping
-let offers=[...new Set(data.map(d => natureOfOfferKey ? (d[natureOfOfferKey] || "").trim() : "").filter(v=>v))];
+let offers=[...new Set(data.map(d => natureOfOfferKey ? (d[natureOfOfferKey] || "").trim() : "").filter(v=>v))].sort();
+let drives=[...new Set(data.map(d => statusOfDriveKey ? (d[statusOfDriveKey] || "").trim() : "").filter(v=>v))].sort();
+
+// Quantitative Ascending Numeric sorting calculation array routine
+let totals=[...new Set(data.map(d => totalKey ? (d[totalKey] || "").trim() : "").filter(v=>v))].sort((a, b) => {
+  return parseFloat(a) - parseFloat(b);
+});
 
 let batchSelect=document.getElementById("batchFilter");
 let offerSelect=document.getElementById("natureOfOfferFilter");
-let companySelect=document.getElementById("companyFilter");
+let driveSelect=document.getElementById("statusOfDriveFilter");
 let natureSelect=document.getElementById("natureFilter");
-let internSelect=document.getElementById("internFilter");
+let totalSelect=document.getElementById("totalFilter");
 let genderSelect=document.getElementById("genderFilter");
 
 batchSelect.innerHTML='<option value="">All Batches</option>';
 offerSelect.innerHTML='<option value="">Nature of Offer</option>';
-companySelect.innerHTML='<option value="">All Companies</option>';
+driveSelect.innerHTML='<option value="">Status of the Drive</option>';
 natureSelect.innerHTML='<option value="">Nature of the Company</option>';
-internSelect.innerHTML='<option value="">Internship Type</option>';
+totalSelect.innerHTML='<option value="">Total</option>';
 genderSelect.innerHTML='<option value="">All Genders</option>';
 
-batches.sort().forEach(v=>batchSelect.add(new Option(v,v)));
-offers.sort().forEach(v=>offerSelect.add(new Option(v,v)));
-companies.sort().forEach(v=>companySelect.add(new Option(v,v)));
-if(natureKey) natures.sort().forEach(v=>natureSelect.add(new Option(v,v)));
-if(internKey) interns.sort().forEach(v=>internSelect.add(new Option(v,v)));
-genders.sort().forEach(v=>genderSelect.add(new Option(v,v)));
-}
-
-function updateCompanyFilter(filteredData){
-let companySelect = document.getElementById("companyFilter");
-let currentValue = companySelect.value;
-let companies = [...new Set(filteredData.map(d => d["Company Placed"]).filter(Boolean))];
-
-companySelect.innerHTML = '<option value="">All Companies</option>';
-companies.sort().forEach(v => companySelect.add(new Option(v,v)));
-
-if(companies.includes(currentValue)){
-companySelect.value = currentValue;
-}
+batches.forEach(v=>batchSelect.add(new Option(v,v)));
+offers.forEach(v=>offerSelect.add(new Option(v,v)));
+drives.forEach(v=>driveSelect.add(new Option(v,v)));
+if(natureKey) natures.forEach(v=>natureSelect.add(new Option(v,v)));
+totals.forEach(v=>totalSelect.add(new Option(v,v)));
+genders.forEach(v=>genderSelect.add(new Option(v,v)));
 }
 
 /* CELL DATA DATE TRANSFORM ENGINE */
@@ -625,9 +617,9 @@ function applyFilters(){
 let search=document.getElementById("search").value.toLowerCase();
 let batch=document.getElementById("batchFilter").value;
 let offer=document.getElementById("natureOfOfferFilter").value;
-let company=document.getElementById("companyFilter").value;
+let drive=document.getElementById("statusOfDriveFilter").value;
 let nature = natureKey ? document.getElementById("natureFilter").value : "";
-let intern = internKey ? document.getElementById("internFilter").value : "";
+let total=document.getElementById("totalFilter").value;
 let gender=document.getElementById("genderFilter").value;
 
 let cStartVal = document.getElementById("campusStart").value;
@@ -660,15 +652,14 @@ if (rEnd && (!cellResultDate || cellResultDate > rEnd)) resultPass = false;
 return text.includes(search)
 && (batch==="" || row["Batch"]===batch)
 && (offer==="" || !natureOfOfferKey || (row[natureOfOfferKey] || "").trim()===offer)
-&& (company==="" || row["Company Placed"]===company)
+&& (drive==="" || !statusOfDriveKey || (row[statusOfDriveKey] || "").trim()===drive)
 && (nature==="" || !natureKey || (row[natureKey] || "").trim()===nature)
-&& (intern==="" || !internKey || (row[internKey] || "").trim()===intern)
+&& (total==="" || !totalKey || (row[totalKey] || "").trim()===total)
 && (gender==="" || (row["Gender"] || "").trim()===gender)
 && campusPass
 && resultPass;
 });
 
-updateCompanyFilter(filtered);
 buildTable(filtered);
 }
 
@@ -676,9 +667,9 @@ buildTable(filtered);
 document.getElementById("search").addEventListener("keyup",applyFilters);
 document.getElementById("batchFilter").addEventListener("change",applyFilters);
 document.getElementById("natureOfOfferFilter").addEventListener("change",applyFilters);
-document.getElementById("companyFilter").addEventListener("change",applyFilters);
+document.getElementById("statusOfDriveFilter").addEventListener("change",applyFilters);
 document.getElementById("natureFilter").addEventListener("change",applyFilters);
-document.getElementById("internFilter").addEventListener("change",applyFilters);
+document.getElementById("totalFilter").addEventListener("change",applyFilters);
 document.getElementById("genderFilter").addEventListener("change",applyFilters);
 
 document.getElementById("campusStart").addEventListener("change",applyFilters);
