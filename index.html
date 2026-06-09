@@ -164,59 +164,59 @@ align-items: center;
 gap: 8px;
 }
 
-/* STATS CARDS GRID CONTAINER WITH SMOOTH SINGLE-ROW HORIZONTAL SCROLL */
+/* MODIFIED: NO-SCROLL COMPACT METRIC STATS BANNER FOR DESKTOPS */
 .stats-banner {
 display: flex;
-flex-wrap: nowrap;
+flex-wrap: wrap; /* Allows wrap on tiny screens but stretches nicely as single row on desktop */
 align-items: center;
-gap: 15px;
+gap: 8px;
 background: rgba(0, 8, 20, 0.6);
 padding: 10px 15px;
 border-left: 1px solid rgba(255,255,255,0.15);
 border-right: 1px solid rgba(255,255,255,0.15);
 border-bottom: 1px solid rgba(255,255,255,0.1);
-overflow-x: auto;
-overflow-y: hidden;
-scroll-behavior: smooth;
+justify-content: space-between;
 }
 
+/* MODIFIED: AUTO-FIT CARDS MATCHING EXACT WIDTH OF THE TEXT INSIDE */
 .stat-card {
-flex: 0 0 auto;
+flex: 1 1 auto; /* Grows and shrinks dynamically according to available container text boundaries */
 background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03));
 border: 1px solid rgba(255,255,255,0.15);
-padding: 6px 14px;
-border-radius: 10px;
+padding: 4px 8px; /* Compressed padding */
+border-radius: 8px;
 text-align: center;
-min-width: 130px;
+min-width: unset; /* Removed hard constraints to eliminate forcing scrollbars */
 box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
 .stat-card .card-label {
-font-size: 10px;
+font-size: 9px; /* Optimized crisp typography dimensions */
 text-transform: uppercase;
-letter-spacing: 0.5px;
+letter-spacing: 0.3px;
 color: #ffe082;
 font-weight: bold;
-margin-bottom: 2px;
+margin-bottom: 1px;
+white-space: nowrap;
 }
 
 .stat-card .card-value {
-font-size: 18px;
+font-size: 15px;
 font-weight: bold;
 color: #ffffff;
 }
 
 .stats-divider {
-font-size: 13px;
+font-size: 11px;
 font-weight: bold;
 color: #b2ff59;
 text-transform: uppercase;
-letter-spacing: 1px;
+letter-spacing: 0.5px;
 white-space: nowrap;
 flex: 0 0 auto;
-padding: 0 12px;
+padding: 0 6px;
 border-left: 2px solid rgba(255,255,255,0.2);
-height: 24px;
+height: 20px;
 display: flex;
 align-items: center;
 }
@@ -269,19 +269,16 @@ border:1px solid #00c6ff;
 
 /* FILTER SCROLLBARS */
 
-.filter-section::-webkit-scrollbar,
-.stats-banner::-webkit-scrollbar{
+.filter-section::-webkit-scrollbar{
 height:6px;
 }
 
-.filter-section::-webkit-scrollbar-track,
-.stats-banner::-webkit-scrollbar-track{
+.filter-section::-webkit-scrollbar-track{
 background:rgba(255,255,255,0.08);
 border-radius:10px;
 }
 
-.filter-section::-webkit-scrollbar-thumb,
-.stats-banner::-webkit-scrollbar-thumb{
+.filter-section::-webkit-scrollbar-thumb{
 background:linear-gradient(90deg,#00c6ff,#0072ff);
 border-radius:10px;
 }
@@ -440,6 +437,16 @@ min-width:1400px;
 
 .date-container {
 justify-content: flex-start;
+}
+
+.stats-banner {
+overflow-x: auto; /* Fallback overflow strictly for mobile screens to handle narrow viewports gracefully */
+flex-wrap: nowrap;
+justify-content: flex-start;
+}
+
+.stat-card {
+padding: 6px 12px;
 }
 
 }
